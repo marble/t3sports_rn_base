@@ -23,6 +23,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_Arrays');
 
 interface tx_rnbase_IParameters {
@@ -99,7 +100,7 @@ class tx_rnbase_parameters extends ArrayObject implements tx_rnbase_IParameters 
 		$value = $this->get($paramName, $qualifier);
 		// remove Cross-Site Scripting
 		if (!empty($value) && strlen($value) > 3) {
-			$value = tx_rnbase_util_Strings::removeXSS($value);
+			$value = t3lib_div::removeXSS($value);
 		}
 		return $value;
 	}
@@ -114,7 +115,9 @@ class tx_rnbase_parameters extends ArrayObject implements tx_rnbase_IParameters 
 		return intval($this->get($paramName, $qualifier));
 	}
 	private function getParametersPlain($qualifier) {
-		$parametersArray = self::getPostAndGetParametersMerged($qualifier);
+		$parametersArray = tx_rnbase_util_TYPO3::isTYPO43OrHigher() ?
+				t3lib_div::_GPmerged($qualifier) :
+				t3lib_div::_GPmerged($qualifier);
 		return $parametersArray;
 	}
 	function getAll($qualifier='') {
@@ -127,65 +130,6 @@ class tx_rnbase_parameters extends ArrayObject implements tx_rnbase_IParameters 
 				$ret[$key] = $value;
 		}
 		return $ret;
-	}
-
-	/**
-	 * @see t3lib_div::_GPmerged
-	 * @see \TYPO3\CMS\Core\Utility\GeneralUtility::_GPmerged
-	 *
-	 * @param string $parameter Key (variable name) from GET or POST vars
-	 * @return array Returns the GET vars merged recursively onto the POST vars.
-	 */
-	static public function getPostAndGetParametersMerged($parameterName) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::_GPmerged($parameterName);
-	}
-
-	/**
-	 * @see t3lib_div::_GP
-	 * @see \TYPO3\CMS\Core\Utility\GeneralUtility::_GP
-	 *
-	 * @param string $parameter Key (variable name) from GET or POST vars
-	 * @return array Returns the GET vars merged recursively onto the POST vars.
-	 */
-	static public function getPostOrGetParameter($parameterName) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::_GP($parameterName);
-	}
-
-	/**
-	 * @see t3lib_div::_GETset
-	 * @see \TYPO3\CMS\Core\Utility\GeneralUtility::_GETset
-	 *
-	 * @param mixed $inputGet
-	 * @param string $key
-	 * @return void
-	 */
-	static public function setGetParameter($inputGet, $key = '') {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		$utility::_GETset($inputGet, $key);
-	}
-
-	/**
-	 * @see t3lib_div::_GET
-	 * @see \TYPO3\CMS\Core\Utility\GeneralUtility::_GET
-	 *
-	 * @return array
-	 */
-	static public function getGetParameters() {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::_GET();
-	}
-
-	/**
-	 * @see t3lib_div::_POST
-	 * @see \TYPO3\CMS\Core\Utility\GeneralUtility::_POST
-	 *
-	 * @return array
-	 */
-	static public function getPostParameters() {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::_POST();
 	}
 }
 

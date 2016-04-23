@@ -21,6 +21,7 @@
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
 
 /**
@@ -105,6 +106,9 @@ abstract class tx_rnbase_mod_base_Lister {
 	 */
 	protected function getSearcherId(){
 		// TODO: abstract??
+//		tx_rnbase::load('tx_mklib_util_String');
+//		$pageId = tx_mklib_util_String::toCamelCase(get_class($this));
+//		return $pageId;
 		return 'searcher';
 	}
 
@@ -241,8 +245,8 @@ abstract class tx_rnbase_mod_base_Lister {
 	 * @param array $options
 	 */
 	protected function prepareSorting(&$options) {
-		$sortField = tx_rnbase_parameters::getPostOrGetParameter('sortField');
-		$sortRev = tx_rnbase_parameters::getPostOrGetParameter('sortRev');
+		$sortField = t3lib_div::_GET('sortField');
+		$sortRev = t3lib_div::_GET('sortRev');
 
 		if(!empty($sortField)) {
 			$cols = $this->getColumns();
@@ -439,7 +443,7 @@ abstract class tx_rnbase_mod_base_Lister {
 	 */
 	protected function showFreeTextSearchForm (&$marker, $key, array $options = array()) {
 		tx_rnbase::load('tx_rnbase_mod_Util');
-		$searchstring = tx_rnbase_mod_Util::getModuleValue($key, $this->getModule(), array('changed' => tx_rnbase_parameters::getPostOrGetParameter('SET')));
+		$searchstring = tx_rnbase_mod_Util::getModuleValue($key, $this->getModule(), array('changed' => t3lib_div::_GP('SET')));
 
 		// Erst das Suchfeld, danach der Button.
 		$marker['field'] 	= $this->getFormTool()->createTxtInput('SET['.$key.']', $searchstring, 10);
@@ -454,8 +458,9 @@ abstract class tx_rnbase_mod_base_Lister {
 				1 => $GLOBALS['LANG']->getLL('label_select_show_hidden'),
 		);
 		tx_rnbase::load('tx_rnbase_mod_Util');
-		$selectedItem = tx_rnbase_mod_Util::getModuleValue('showhidden', $this->getModule(), array('changed' => tx_rnbase_parameters::getPostOrGetParameter('SET')));
+		$selectedItem = tx_rnbase_mod_Util::getModuleValue('showhidden', $this->getModule(), array('changed' => t3lib_div::_GP('SET')));
 
+//		$selectedItem = array_key_exists('forcevalue', $aOptions) ? $aOptions['forcevalue'] : $this->getValueFromModuleData($id);
 		$options['label'] = $options['label'] ? $options['label'] : $GLOBALS['LANG']->getLL('label_hidden');
 		return tx_rnbase_mod_Util::showSelectorByArray($items, $selectedItem, 'showhidden', $marker, $options);
 	}

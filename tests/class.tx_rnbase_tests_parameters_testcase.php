@@ -22,6 +22,9 @@
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
+
+
 
 /**
  * parameters testcase
@@ -30,7 +33,7 @@
  * @subpackage tx_rnbase_tests
  * @author Michael Wagner <michael.wagner@dmk-ebusiness.de>
  */
-class tx_rnbase_tests_parameters_testcase extends Tx_Phpunit_TestCase {
+class tx_rnbase_tests_parameters_testcase extends tx_phpunit_testcase {
 
 	public function testGet()
 	{

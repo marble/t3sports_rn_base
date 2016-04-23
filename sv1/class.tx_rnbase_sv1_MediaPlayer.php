@@ -21,7 +21,7 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
-tx_rnbase::load('Tx_Rnbase_Service_Base');
+
 
 /**
  * Service "MediaPlayer" for playing mp3 media files.
@@ -30,7 +30,7 @@ tx_rnbase::load('Tx_Rnbase_Service_Base');
  * @package	TYPO3
  * @subpackage	tx_cfcleaguefe
  */
-class tx_rnbase_sv1_MediaPlayer extends Tx_Rnbase_Service_Base {
+class tx_rnbase_sv1_MediaPlayer extends t3lib_svbase {
   var $prefixId = 'tx_rnbase_sv1_MediaPlayer';  // Same as class name
   var $scriptRelPath = 'sv1/class.tx_rnbase_sv1_MediaPlayer.php'; // Path to this script relative to the extension dir.
   var $extKey = 'rn_base'; // The extension key.
@@ -61,8 +61,11 @@ class tx_rnbase_sv1_MediaPlayer extends Tx_Rnbase_Service_Base {
     $autoStart = $playerConf['autoStart'];
     $autoReplay = $playerConf['autoReplay'];
 
-    tx_rnbase::load('tx_rnbase_util_Extensions');
-    $fePath = tx_rnbase_util_Extensions::siteRelPath('rn_base') . 'sv1/';
+
+//    t3lib_utility_Debug::debug($color, 'mediaplayer');
+//    t3lib_utility_Debug::debug($media , 'mediaplayer');
+
+    $fePath = t3lib_extMgm::siteRelPath('rn_base') . 'sv1/';
 
     $out = '<object type="application/x-shockwave-flash" data="/'.
             $fePath. 'dewplayer.swf?son='.

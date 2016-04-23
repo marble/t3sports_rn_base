@@ -19,12 +19,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
 
 tx_rnbase::load('tx_rnbase_util_Misc');
 tx_rnbase::load('tx_rnbase_util_Debug');
 tx_rnbase::load('tx_rnbase_util_Templates');
-tx_rnbase::load('tx_rnbase_util_Strings');
-
 
 /**
  * Abstract base class for an action. This action is build to implement the
@@ -43,6 +42,8 @@ tx_rnbase::load('tx_rnbase_util_Strings');
  * @author Michael Wagner <michael.wagner@dmk-ebusines.de>
  */
 abstract class tx_rnbase_action_BaseIOC {
+	private static $callCount = 0;
+	private static function countCall() { return self::$callCount++; }
 	private $configurations = NULL;
 
 	/**
@@ -54,10 +55,9 @@ abstract class tx_rnbase_action_BaseIOC {
 	function execute(&$parameters, &$configurations){
 		$this->setConfigurations($configurations);
 		$debugKey = $configurations->get($this->getConfId().'_debugview');
-
 		$debug = ($debugKey && ($debugKey==='1' ||
-				($_GET['debug'] && array_key_exists($debugKey, array_flip(tx_rnbase_util_Strings::trimExplode(',', $_GET['debug'])))) ||
-				($_POST['debug'] && array_key_exists($debugKey, array_flip(tx_rnbase_util_Strings::trimExplode(',', $_POST['debug']))))
+				($_GET['debug'] && array_key_exists($debugKey, array_flip(t3lib_div::trimExplode(',', $_GET['debug'])))) ||
+				($_POST['debug'] && array_key_exists($debugKey, array_flip(t3lib_div::trimExplode(',', $_POST['debug']))))
 				)
 		);
 		if($debug) {
@@ -73,8 +73,6 @@ abstract class tx_rnbase_action_BaseIOC {
 			}
 			$configurations->convertToUserInt();
 		}
-		// Add JS or CSS files
-		$this->addResources($configurations, $this->getConfId());
 
 		$cacheHandler = $this->getCacheHandler($configurations, $this->getConfId().'_caching.');
 		$out = $cacheHandler ? $cacheHandler->getOutput() : '';
@@ -125,33 +123,6 @@ abstract class tx_rnbase_action_BaseIOC {
 		// reset the substCache after each view!
 		tx_rnbase_util_Templates::resetSubstCache();
 		return $out;
-	}
-	/**
-	 *
-	 * @param tx_rnbase_configurations $configurations
-	 * @param unknown $confId
-	 */
-	protected function addResources($configurations, $confId) {
-		tx_rnbase::load('tx_rnbase_util_Files');
-		$pageRenderer = tx_rnbase_util_TYPO3::getTSFE()->getPageRenderer();
-
-		$files = $configurations->get($confId.'includeJSFooter.');
-		if (is_array($files)) {
-			foreach ($files As $file) {
-				if($file = tx_rnbase_util_Files::getFileName($file)) {
-					$pageRenderer->addJsFooterFile($file);
-				}
-			}
-		}
-
-		$files = $configurations->get($confId.'includeCSS.');
-		if (is_array($files)) {
-			foreach ($files As $file) {
-				if($file = tx_rnbase_util_Files::getFileName($file)) {
-					$pageRenderer->addCssFile($file);
-				}
-			}
-		}
 	}
 
 	/**
@@ -251,22 +222,6 @@ abstract class tx_rnbase_action_BaseIOC {
 	 */
 	protected abstract function handleRequest(&$parameters, &$configurations, &$viewdata);
 
-
-	/**
-	 * Create a fully initialized link instance. Useful for controllers with formular handling.
-	 *
-	 * @param tx_rnbase_configurations $configurations
-	 * @param string $confId
-	 * @param array $params
-	 * @return \tx_rnbase_util_Link link instance
-	 */
-	protected function createLink($configurations, $confId, $params = array()) {
-		$link = $configurations->createLink();
-		$link->initByTS($configurations, $confId, $params);
-		if($configurations->get($confId.'noCache'))
-			$link->noCache();
-		return $link;
-	}
 }
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/action/class.tx_rnbase_action_BaseIOC.php'])	{

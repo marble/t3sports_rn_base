@@ -2,7 +2,7 @@
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2008-2016 Rene Nitzsche (rene@system25.de)
+ *  (c) 2008-2013 Rene Nitzsche (rene@system25.de)
  *  All rights reserved
  *
  *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -23,7 +23,7 @@
  ***************************************************************/
 
 // Die Datenbank-Klasse
-tx_rnbase::load('tx_rnbase_model_base');
+require_once(t3lib_extMgm::extPath('rn_base') . 'model/class.tx_rnbase_model_base.php');
 
 /**
  */
@@ -49,10 +49,12 @@ class tx_rnbase_model_media extends tx_rnbase_model_base {
 		// Ab TYPO3 6.x wird nur noch FAL unterstützt.
 		if(tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
 			// Bei FAL steckt in Media eine Referenz
-			if($media instanceof TYPO3\CMS\Core\Resource\FileReference)
-				$this->initFalReference($media);
-			else
-				$this->initFalFile($media);
+			$this->record = $media->getProperties();
+			// Wir verwenden hier die UID der Referenz
+			$this->uid = $media->getUid();
+			$this->record['uid'] = $media->getUid();
+			$this->record['file_path'] = $media->getPublicUrl();
+			$this->record['file_abs_url'] = t3lib_div::getIndpEnv('TYPO3_SITE_URL') .$this->record['file_path'];
 		}
 		else {
 			// DAM
@@ -60,33 +62,8 @@ class tx_rnbase_model_media extends tx_rnbase_model_base {
 			$this->record = $media->meta;
 		}
 	}
-	/**
-	 *
-	 * @param TYPO3\CMS\Core\Resource\File $media
-	 */
-	private function initFalFile($media) {
-		$this->record = $media->getProperties();
-		$this->uid = $media->getUid();
-		$this->record['fal_file'] = '1'; // Das wird per TS ausgewertet. Die UID ist KEINE Referenz
-		$this->record['uid_local'] = $media->getUid();
-		$this->record['file_path'] = $media->getPublicUrl();
-		$this->record['file_abs_url'] = tx_rnbase_util_Misc::getIndpEnv('TYPO3_SITE_URL') .$this->record['file_path'];
-	}
-
-	/**
-	 *
-	 * @param TYPO3\CMS\Core\Resource\FileReference $media
-	 */
-	private function initFalReference($media) {
-		$this->record = $media->getProperties();
-		// Wir verwenden hier die UID der Referenz
-		$this->uid = $media->getUid();
-		$this->record['uid'] = $media->getUid();
-		$this->record['file_path'] = $media->getPublicUrl();
-		$this->record['file_abs_url'] = tx_rnbase_util_Misc::getIndpEnv('TYPO3_SITE_URL') .$this->record['file_path'];
-	}
 	private function initAdditionalData() {
-		$this->record['file'] = urldecode($this->record['file_path'].$this->record['file_name']);
+		$this->record['file'] = $this->record['file_path'].$this->record['file_name'];
 		// Some more file fields are useful
 		$this->record['file1'] = $this->record['file'];
 		$this->record['thumbnail'] = $this->record['file'];

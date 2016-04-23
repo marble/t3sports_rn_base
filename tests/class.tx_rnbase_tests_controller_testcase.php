@@ -22,6 +22,7 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_controller');
 tx_rnbase::load('tx_rnbase_exception_IHandler');
 tx_rnbase::load('tx_rnbase_tests_BaseTestCase');
@@ -46,10 +47,6 @@ class tx_rnbase_tests_controller_testcase extends tx_rnbase_tests_BaseTestCase {
 		$this->exceptionHandlerConfig = $extConfig['exceptionHandler'];
 
 		$GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['devlog']['nolog'] = TRUE;
-
-		if(is_object($GLOBALS['TSFE'])) {
-			unset($GLOBALS['TSFE']);
-		}
 	}
 
 	protected function tearDown() {
@@ -151,45 +148,13 @@ class tx_rnbase_tests_controller_testcase extends tx_rnbase_tests_BaseTestCase {
 	/**
 	 * @group unit
 	 */
-	public function testGetTsfe() {
-		$controller = tx_rnbase::makeInstance('tx_rnbase_controller');
-		self::assertInstanceOf(
-			tx_rnbase_util_Typo3Classes::getTypoScriptFrontendControllerClass(),
-			$this->callInaccessibleMethod($controller, 'getTsfe')
-		);
-	}
-
-	/**
-	 * @group unit
-	 */
-	public function testDoActionIfNoExceptionIsFoundCallsNotGetTsfe() {
-		$controller = $this->getMock('tx_rnbase_controller', array('getTsfe'));
-
-		$controller->expects($this->never())
-			->method('getTsfe');
-
-		$parameters = NULL;
-		$configurations = $this->createConfigurations(array(), 'rn_base');
-		$controller->doAction('unknown', $parameters, $configurations);
-	}
-
-	/**
-	 * @group unit
-	 */
-	public function testDoActionCallsPageNotFoundHandlingIfItemNotFound404Exception() {
-		$controller = $this->getMock('tx_rnbase_controller', array('getTsfe'));
-		$tsfe = $this->getMock(
-			tx_rnbase_util_Typo3Classes::getTypoScriptFrontendControllerClass(),
-			array('pageNotFoundAndExit'), array(), '', FALSE
+	public function testDoActionCallsSet404HeaderAndRobotsNoIndexIfItemNotFound404Exception() {
+		$controller = $this->getMock(
+			'tx_rnbase_controller', array('set404HeaderAndRobotsNoIndex')
 		);
 
-		$tsfe->expects(self::once())
-			->method('pageNotFoundAndExit')
-			->with('tx_rnbase_exception_ItemNotFound404 was thrown');
-
-		$controller->expects(self::once())
-			->method('getTsfe')
-			->will(self::returnValue($tsfe));
+		$controller->expects($this->once())
+			->method('set404HeaderAndRobotsNoIndex');
 
 		$parameters = $configurations = NULL;
 		$controller->doAction(
@@ -201,29 +166,35 @@ class tx_rnbase_tests_controller_testcase extends tx_rnbase_tests_BaseTestCase {
 	/**
 	 * @group unit
 	 */
-	public function testDoActionCallsPageNotFoundHandlingIfPageNotFoundException() {
-		if (!tx_rnbase_util_TYPO3::isTYPO62OrHigher()) {
-			self::markTestSkipped('Dieses Feature wird erst ab TYPO3 6.2 unterstützt');
-		}
-
-		$controller = $this->getMock('tx_rnbase_controller', array('getTsfe'));
-		$tsfe = $this->getMock(
-			tx_rnbase_util_Typo3Classes::getTypoScriptFrontendControllerClass(),
-			array('pageNotFoundAndExit'), array(), '', FALSE
+	public function testDoActionCallsSet404HeaderAndRobotsNoIndexNotIfNotItemNotFound404Exception() {
+		$controller = $this->getMock(
+				'tx_rnbase_controller', array('set404HeaderAndRobotsNoIndex')
 		);
 
-		$tsfe->expects(self::once())
-			->method('pageNotFoundAndExit')
-			->with('TYPO3\\CMS\\Core\\Error\\Http\\PageNotFoundException was thrown');
+		$controller->expects($this->never())
+			->method('set404HeaderAndRobotsNoIndex');
 
-		$controller->expects(self::once())
-			->method('getTsfe')
-			->will(self::returnValue($tsfe));
+		$parameters = NULL;
+		$configurations = $this->createConfigurations(array(), 'rn_base');
+		$controller->doAction('unknown', $parameters, $configurations);
+	}
 
-		$parameters = $configurations = NULL;
-		$controller->doAction(
-			'tx_rnbase_tests_action_throwPageNotFoundException',
-			$parameters, $configurations
+	/**
+	 * @group unit
+	 */
+	public function testSet404HeaderAndRobotsNoIndexSetRobotsMetaTag() {
+		$controller = tx_rnbase::makeInstance(
+			'tx_rnbase_controller'
+		);
+
+		try {
+			$this->callInaccessibleMethod($controller, 'set404HeaderAndRobotsNoIndex');
+		} catch (Exception $e) {
+		}
+
+		$this->assertEquals(
+			'<meta name="robots" content="NOINDEX,FOLLOW">',
+			$GLOBALS['TSFE']->additionalHeaderData['rnBaseRobots']
 		);
 	}
 }
@@ -268,15 +239,5 @@ class tx_rnbase_tests_action_throwItemNotFound404Exception {
 	 */
 	public function execute() {
 		throw tx_rnbase::makeInstance('tx_rnbase_exception_ItemNotFound404');
-	}
-}
-
-class tx_rnbase_tests_action_throwPageNotFoundException {
-
-	/**
-	 * @throws TYPO3\CMS\Core\Error\Http\PageNotFoundException
-	 */
-	public function execute() {
-		throw new TYPO3\CMS\Core\Error\Http\PageNotFoundException();
 	}
 }

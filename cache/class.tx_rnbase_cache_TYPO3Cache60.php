@@ -22,6 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
 tx_rnbase::load('tx_rnbase_cache_ICache');
 
@@ -43,7 +44,7 @@ class tx_rnbase_cache_TYPO3Cache60 implements tx_rnbase_cache_ICache {
 	}
 
 	/**
-	 * @return \TYPO3\CMS\Core\Cache\CacheManager
+	 * @return t3lib_cache_Manager
 	 */
 	private function getT3CacheManager() {
 		return $GLOBALS['typo3CacheManager'];
@@ -59,6 +60,11 @@ class tx_rnbase_cache_TYPO3Cache60 implements tx_rnbase_cache_ICache {
 				)
 			);
 			$this->getT3CacheManager()->setCacheConfigurations($defaultCache);
+
+//			// Das Transient ist in der 4.3.0 nicht konfiguriert
+//			if(!array_key_exists('t3lib_cache_backend_TransientMemoryBackend', $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheBackends'])) {
+//				$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheBackends']['t3lib_cache_backend_TransientMemoryBackend'] = 't3lib/cache/backend/class.t3lib_cache_backend_transientmemorybackend.php:t3lib_cache_backend_TransientMemoryBackend';
+//			}
 		}
 	}
 
@@ -82,7 +88,7 @@ class tx_rnbase_cache_TYPO3Cache60 implements tx_rnbase_cache_ICache {
 	/**
 	 * Set the TYPO3 cache instance.
 	 *
-	 * @param \TYPO3\CMS\Core\Cache\Frontend\FrontendInterface $cache
+	 * @param t3lib_cache_frontend_Frontend $cache
 	 */
 	private function setCache(\TYPO3\CMS\Core\Cache\Frontend\FrontendInterface $cache) {
 		$this->cache = $cache;
@@ -90,7 +96,7 @@ class tx_rnbase_cache_TYPO3Cache60 implements tx_rnbase_cache_ICache {
 	/**
 	 * Set the TYPO3 cache instance.
 	 *
-	 * @return \TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+	 * @return t3lib_cache_frontend_Frontend
 	 */
 	private function getCache() {
 		return $this->cache;

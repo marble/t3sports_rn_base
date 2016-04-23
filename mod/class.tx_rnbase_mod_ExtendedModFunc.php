@@ -22,7 +22,7 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Network');
+
 tx_rnbase::load('tx_rnbase_mod_IModule');
 tx_rnbase::load('tx_rnbase_mod_IModFunc');
 tx_rnbase::load('tx_rnbase_util_BaseMarker');
@@ -52,8 +52,8 @@ abstract class tx_rnbase_mod_ExtendedModFunc implements tx_rnbase_mod_IModFunc {
 		$out = '';
 		$conf = $this->getModule()->getConfigurations();
 
-		$file = tx_rnbase_util_Files::getFileAbsFileName($conf->get($this->getConfId().'template'));
-		$templateCode = tx_rnbase_util_Network::getURL($file);
+		$file = t3lib_div::getFileAbsFileName($conf->get($this->getConfId().'template'));
+		$templateCode = t3lib_div::getURL($file);
 		if(!$templateCode) return $conf->getLL('msg_template_not_found').'<br />File: \'' . $file . '\'<br />ConfId: \'' . $this->getConfId().'template\'';
 		$subpart = '###'.strtoupper($this->getFuncId()).'###';
 		$template = tx_rnbase_util_Templates::getSubpart($templateCode, $subpart);
@@ -136,13 +136,6 @@ abstract class tx_rnbase_mod_ExtendedModFunc implements tx_rnbase_mod_IModFunc {
 	 *
 	 */
 	abstract protected function getFuncId();
-
-	/**
-	 *
-	 * @param array $menuObjs
-	 * @param tx_rnbase_util_FormTool $formTool
-	 * @return array
-	 */
 	protected function initSubMenu(&$menuObjs, $formTool) {
 		$items = $this->getSubMenuItems();
 		if(!is_array($items)) return;
@@ -164,8 +157,7 @@ abstract class tx_rnbase_mod_ExtendedModFunc implements tx_rnbase_mod_IModFunc {
 	protected function showMessage($message, tx_rnbase_mod_IModHandler $handler) {
 		$msg = '';
 		$title = '';
-		$flashMessageClass = tx_rnbase_util_Typo3Classes::getFlashMessageClass();
-		$severity = $flashMessageClass::OK;
+		$severity = t3lib_FlashMessage::OK;
 		$store = FALSE;
 		if(is_array($message)) {
 			$msg = $message['message'];

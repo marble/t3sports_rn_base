@@ -22,8 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
-tx_rnbase::load('tx_rnbase_configurations');
-tx_rnbase::load('tx_rnbase_util_Typo3Classes');
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase_configurations.php');
 
 /**
  * Contains some helpful methods
@@ -37,17 +36,15 @@ class tx_rnbase_util_Misc {
 	 *
 	 * @param string $type
 	 * @param string $subType
-	 * @return t3lib_svbase or \TYPO3\CMS\Core\Service\AbstractService
+	 * @return t3lib_svbase
 	 */
-	static function getService($type, $subType = '') {
-		$service = tx_rnbase::makeInstanceService($type, $subType);
-
-		if(!is_object($service)) {
-			tx_rnbase::load('tx_rnbase_util_Misc');
-			return self::mayday('Service ' . $type . ' - ' . $subType . ' not found!');;
-		}
-
-		return $service;
+	static function getService($type, $subType='') {
+    $srv = t3lib_div::makeInstanceService($type, $subType);
+    if(!is_object($srv)) {
+    	tx_rnbase::load('tx_rnbase_util_Misc');
+      return self::mayday('Service ' . $type . ' - ' . $subType . ' not found!');;
+    }
+    return $srv;
 	}
 	/**
 	 * Returns an array with all subtypes for given service key.
@@ -98,15 +95,11 @@ class tx_rnbase_util_Misc {
 	 * @param string $hookKey
 	 * @param array $params
 	 * @param mixed $parent instance of calling class or 0
-	 * @return void
 	 */
 	public static function callHook($extKey, $hookKey, $params, $parent=0) {
 		if (is_array($GLOBALS['TYPO3_CONF_VARS']['EXTCONF'][$extKey][$hookKey])) {
 			foreach($GLOBALS['TYPO3_CONF_VARS']['EXTCONF'][$extKey][$hookKey] as $funcRef) {
-				$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-				$utility::callUserFunction(
-					$funcRef, $params, $parent
-				);
+				t3lib_div::callUserFunction($funcRef, $params, $parent);
 			}
 		}
 	}
@@ -116,7 +109,7 @@ class tx_rnbase_util_Misc {
 	 * Such a function/method should look like this: "function proc(&$params, &$ref)	{...}"
 	 * Usage: 17
 	 *
-	 * @param	string		Function/Method reference, '[file-reference":"]["&"]class/function["->"method-name]'. You can prefix this reference with "[file-reference]:" and tx_rnbase_util_Files::getFileAbsFileName() will then be used to resolve the filename and subsequently include it by "require_once()" which means you don't have to worry about including the class file either! Example: "EXT:realurl/class.tx_realurl.php:&tx_realurl->encodeSpURL". Finally; you can prefix the class name with "&" if you want to reuse a former instance of the same object call ("singleton").
+	 * @param	string		Function/Method reference, '[file-reference":"]["&"]class/function["->"method-name]'. You can prefix this reference with "[file-reference]:" and t3lib_div::getFileAbsFileName() will then be used to resolve the filename and subsequently include it by "require_once()" which means you don't have to worry about including the class file either! Example: "EXT:realurl/class.tx_realurl.php:&tx_realurl->encodeSpURL". Finally; you can prefix the class name with "&" if you want to reuse a former instance of the same object call ("singleton").
 	 * @param	mixed		Parameters to be pass along (typically an array) (REFERENCE!)
 	 * @param	mixed		Reference to be passed along (typically "$this" - being a reference to the calling object) (REFERENCE!)
 	 * @param	string		Required prefix of class or function name
@@ -125,8 +118,12 @@ class tx_rnbase_util_Misc {
 	 * @see getUserObj()
 	 */
 	public static function callUserFunction($funcName, &$params, &$ref, $checkPrefix = 'user_', $errorMode = 0) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::callUserFunction($funcName, $params, $ref);
+		if(tx_rnbase_util_TYPO3::isTYPO62OrHigher()) {
+			return \TYPO3\CMS\Core\Utility\GeneralUtility::callUserFunction($funcName, $params, $ref);
+		}
+		else {
+			return t3lib_div::callUserFunction($funcName, $params, $ref);
+		}
 	}
 
 	/**
@@ -293,7 +290,7 @@ MAYDAYPAGE;
 			if($bRecursive) {
 				$result = "<span style='" . $sStyleGreen . "'>OBJECT (" . get_class($mMixed) .") : </span>" . self::viewMixed(get_object_vars($mMixed), FALSE, $iLevel + 1);
 			} else {
-				$result = "<span style='" . $sStyleGreen . "'>OBJECT (" . get_class($mMixed) .") : !RECURSION STOPPED!</span>";
+				$result = "<span style='" . $sStyleGreen . "'>OBJECT (" . get_class($mMixed) .") : !RECURSION STOPPED!</span>";// . t3lib_utility_Debug::viewArray(get_object_vars($mMixed), FALSE);
 			}
 		} elseif(is_bool($mMixed)) {
 			$result = "<span style='" . $sStyleGreen . "'>BOOLEAN: </span>" . ($mMixed ? 'TRUE' : 'FALSE');
@@ -316,7 +313,7 @@ MAYDAYPAGE;
 	/**
 	* Prepare classes for FE-rendering if it is needed in TYPO3 backend.
 	*
-	* @return \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController or tslib_fe
+	* @return tslib_fe
 	*/
 	public static function prepareTSFE($options = array()) {
 		$pid = array_key_exists('pid', $options) ? $options['pid'] : 1;
@@ -324,71 +321,44 @@ MAYDAYPAGE;
 
 		$force = array_key_exists('force', $options) ? TRUE : FALSE;
 
-		if (!is_object($GLOBALS['TT'])) {
-			$className = tx_rnbase_util_Typo3Classes::getTimeTrackClass();
-			$GLOBALS['TT'] = new $className;
+		if(!is_object($GLOBALS['TT'])) {
+			$GLOBALS['TT'] = new t3lib_timeTrack;
 			$GLOBALS['TT']->start();
 		}
-
-		$typoScriptFrontendControllerClass = tx_rnbase_util_Typo3Classes::getTypoScriptFrontendControllerClass();
-		if (
-			!is_object($GLOBALS['TSFE']) ||
-			!($GLOBALS['TSFE'] instanceof $typoScriptFrontendControllerClass) ||
-			$force
-		) {
-
-			if (!defined('PATH_tslib')) {
+		if(!is_object($GLOBALS['TSFE']) || $force) {
+			if(!defined('PATH_tslib')) {
 				// PATH_tslib setzen
 				if (@is_dir(PATH_site.'typo3/sysext/cms/tslib/')) {
 					define('PATH_tslib', PATH_site.'typo3/sysext/cms/tslib/');
 				} elseif (@is_dir(PATH_site.'tslib/')) {
 					define('PATH_tslib', PATH_site.'tslib/');
 				} else {
-					define('PATH_tslib', '');
+					$configured_tslib_path = '';
+					// example:
+					// $configured_tslib_path = '/var/www/mysite/typo3/sysext/cms/tslib/';
+					define('PATH_tslib', $configured_tslib_path);
 				}
 			}
 
-			$GLOBALS['TSFE'] = tx_rnbase::makeInstance(
-				$typoScriptFrontendControllerClass,
-				$GLOBALS['TYPO3_CONF_VARS'],
-				$pid,
-				$type
-			);
-		}
-
-		// base user groups
-		if (empty($GLOBALS['TSFE']->gr_list) || $force) {
-			$GLOBALS['TSFE']->gr_list = '0,-1';
-		}
-
-		// init the syspage for pageSelect
-		if (!is_object($GLOBALS['TSFE']->sys_page) || $force) {
-			$temp_sys_page = tx_rnbase_util_TYPO3::getSysPage();
+			$GLOBALS['TSFE'] = tx_rnbase::makeInstance('tslib_fe', $GLOBALS['TYPO3_CONF_VARS'], $pid, $type);
+			// Jetzt noch pageSelect
+			$temp_sys_page = t3lib_div::makeInstance('t3lib_pageSelect');
 			$temp_sys_page->init(0);
 			$GLOBALS['TSFE']->sys_page = $temp_sys_page;
-		}
-
-		// init the template
-		if (!is_object($GLOBALS['TSFE']->tmpl) || $force) {
 			$GLOBALS['TSFE']->initTemplate();
-			if (empty($GLOBALS['TSFE']->tmpl->getFileName_backPath)) {
-				$GLOBALS['TSFE']->tmpl->getFileName_backPath = PATH_site;
-			}
-		}
 
-		// initial empty config
-		if (!is_array($GLOBALS['TSFE']->config)) {
-			$GLOBALS['TSFE']->config = array();
-		}
-		if (!is_array($GLOBALS['TSFE']->config['config'])) {
+			// Bugfix: initLLvars does not check if config['config'] is an array
+			// which throws an warning when trying to access config['config']['language']
+			if(!(isset($GLOBALS['TSFE']->config['config']) && is_array($GLOBALS['TSFE']->config['config']))){
+				$GLOBALS['TSFE']->config['config'] = array();
+			}
+
+			$GLOBALS['TSFE']->initLLvars();
+			$GLOBALS['TSFE']->tmpl->getFileName_backPath = $GLOBALS['TSFE']->tmpl->getFileName_backPath ? $GLOBALS['TSFE']->tmpl->getFileName_backPath : PATH_site;
+			//Basis Nutzergruppen
+			$GLOBALS['TSFE']->gr_list = '0,-1';
 			$GLOBALS['TSFE']->config['config'] = array();
 		}
-
-		// init the language
-		if (empty($GLOBALS['TSFE']->lang) || $force) {
-			$GLOBALS['TSFE']->initLLvars();
-		}
-
 		return $GLOBALS['TSFE'];
 	}
 	/**
@@ -418,7 +388,7 @@ MAYDAYPAGE;
 	static function validateSearchString($searchterm, $minLength=3) {
 		// Suchteile splitten
 		$ret = array();
-		$arr = tx_rnbase_util_Strings::trimExplode(' ', $searchterm);
+		$arr = t3lib_div::trimExplode(' ', $searchterm);
 		foreach($arr As $term) {
 			if(strlen($term) >= $minLength) $ret[] = $term;
 		}
@@ -519,19 +489,18 @@ MAYDAYPAGE;
 	 */
 	public static function getPidList($pid_list, $recursive=0)  {
 		tx_rnbase::load('tx_rnbase_util_Math');
-		tx_rnbase::load('tx_rnbase_util_Typo3Classes');
 		if (!strcmp($pid_list, '')) {
 			$pid_list = tx_rnbase_util_TYPO3::getTSFE()->id;
 		}
 		$recursive = tx_rnbase_util_Math::intInRange($recursive, 0);
-		$pid_list_arr = array_unique(tx_rnbase_util_Strings::trimExplode(',', $pid_list, 1));
+		$pid_list_arr = array_unique(t3lib_div::trimExplode(',', $pid_list, 1));
 
 		$pid_list = array();
 		foreach($pid_list_arr as $val)  {
 			$val = tx_rnbase_util_Math::intInRange($val, 0);
 			if ($val) {
-				/* @var $cObj \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer */
-				$cObj = tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getContentObjectRendererClass());
+				/* @var $cObj tslib_cObj */
+				$cObj = tx_rnbase::makeInstance('tslib_cObj');
 				$_list = $cObj->getTreeList(-1 * $val, $recursive);
 				if ($_list) {
 					$pid_list[] = $_list;
@@ -546,15 +515,11 @@ MAYDAYPAGE;
 	 * Example: Converts BlogExample to blog_example, and minimalValue to minimal_value
 	 * Taken from t3lib_div for backward compatibility
 	 *
-	 * @deprecated use tx_rnbase_util_Strings::camelCaseToLowerCaseUnderscored instead
-	 *
-	 * @param string $string: String to be converted to lowercase underscore
-	 * @return string lowercase_and_underscored_string
+	 * @param	string		$string: String to be converted to lowercase underscore
+	 * @return	string		lowercase_and_underscored_string
 	 */
 	public static function camelCaseToLowerCaseUnderscored($string) {
-		self::logDeprecatedFunction();
-		tx_rnbase::load('tx_rnbase_util_Strings');
-		return tx_rnbase_util_Strings::camelCaseToLowerCaseUnderscored($string);
+		return strtolower(preg_replace('/(?<=\w)([A-Z])/', '_\\1', $string));
 	}
 
 	/**
@@ -586,7 +551,7 @@ MAYDAYPAGE;
 		$mail->setSubject('Exception on site '.$GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename']);
 
 		$from = tx_rnbase_configurations::getExtensionCfgValue('rn_base', 'fromEmail');
-		$from = $from ? $from : 'error@' . tx_rnbase_util_Misc::getIndpEnv('TYPO3_HOST_ONLY');
+		$from = $from ? $from : 'error@' . t3lib_div::getIndpEnv('TYPO3_HOST_ONLY');
 		$mail->setFrom($from);
 
 		$mail->setTo($mailAddr);
@@ -606,7 +571,7 @@ MAYDAYPAGE;
 		$textPart .= 'UNCAUGHT EXCEPTION FOR VIEW: ' . $actionName ."\n\n";
 		$textPart .= 'Message: ' . $e->getMessage()."\n\n";
 		$textPart .= "Stacktrace:\n". $e->__toString()."\n";
-		$textPart .= 'SITE_URL: ' . tx_rnbase_util_Misc::getIndpEnv('TYPO3_SITE_URL')."\n";
+		$textPart .= 'SITE_URL: ' . t3lib_div::getIndpEnv('TYPO3_SITE_URL')."\n";
 
 		tx_rnbase::load('tx_rnbase_util_TYPO3');
 		$textPart .= 'BE_USER: '.tx_rnbase_util_TYPO3::getBEUserUID()."\n";
@@ -620,7 +585,7 @@ MAYDAYPAGE;
 		$htmlPart .= '<div><strong>UNCAUGHT EXCEPTION FOR VIEW: ' . $actionName .'</strong></div>';
 		$htmlPart .= '<p><strong>Message:</strong><br />' . $e->getMessage() . '</p>';
 		$htmlPart .= '<p><strong>Stacktrace:</strong><pre>'.$e->__toString().'</pre></p>';
-		$htmlPart .= '<p><strong>SITE_URL</strong><br />'. tx_rnbase_util_Misc::getIndpEnv('TYPO3_SITE_URL'). '</p>';
+		$htmlPart .= '<p><strong>SITE_URL</strong><br />'. t3lib_div::getIndpEnv('TYPO3_SITE_URL'). '</p>';
 
 		$get = self::removePasswordParams($_GET);
 		if(count($get))
@@ -675,29 +640,14 @@ MAYDAYPAGE;
 	 * @return	string		Value based on the input key, independent of server/os environment.
 	 */
 	public static function getIndpEnv($getEnvName) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::getIndpEnv($getEnvName);
+		if(tx_rnbase_util_TYPO3::isTYPO62OrHigher()) {
+			return \TYPO3\CMS\Core\Utility\GeneralUtility::getIndpEnv($getEnvName);
+		}
+		else {
+			return t3lib_div::getIndpEnv($getEnvName);
+		}
 	}
 
-	/**
-	 * Wrapper method for t3lib_div::milliseconds() or \TYPO3\CMS\Core\Utility\GeneralUtility::milliseconds()
-	 *
-	 * @return integer The unixtime as milliseconds
-	 */
-	static public function milliseconds() {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::milliseconds() ;
-	}
-
-	/**
-	 * Wrapper method for t3lib_div::logDeprecatedFunction() or \TYPO3\CMS\Core\Utility\GeneralUtility::logDeprecatedFunction()
-	 *
-	 * @return void
-	 */
-	static public function logDeprecatedFunction() {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		$utility::logDeprecatedFunction();
-	}
 }
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_Misc.php']) {

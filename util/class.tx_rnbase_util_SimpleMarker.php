@@ -22,8 +22,8 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_BaseMarker');
-tx_rnbase::load('Tx_Rnbase_Frontend_Marker_Utility');
 
 /**
  * A generic marker class.
@@ -39,7 +39,7 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 
 	/**
 	 * @param string $template das HTML-Template
-	 * @param Tx_Rnbase_Domain_Model_DomainInterface $item
+	 * @param tx_rnbase_model_base $item
 	 * @param tx_rnbase_util_FormatUtil $formatter der zu verwendente Formatter
 	 * @param string $confId Pfad der TS-Config
 	 * @param string $marker Name des Markers
@@ -54,15 +54,9 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 
 		$this->prepareItem($item, $formatter->getConfigurations(), $confId);
 
-		// Einstiegspunkt für Kindklassen
-		$template = $this->prepareTemplate($template, $item, $formatter, $confId, $marker);
-
 		// Es wird das MarkerArray mit den Daten des Records gefüllt.
-		// TODO: Der instancof-Check ist nicht schon. Der Typ des Models sollte besser konfiguriert werden, oder?
-		$ignore = $item instanceof Tx_Rnbase_Domain_Model_Data ?
-					Tx_Rnbase_Frontend_Marker_Utility::findUnusedAttributes($item, $template, $marker) :
-					self::findUnusedCols($item->getRecord(), $template, $marker);
-		$markerArray = $formatter->getItemMarkerArrayWrapped($item->getRecord(), $confId , $ignore, $marker.'_', $item->getColumnNames());
+		$ignore = self::findUnusedCols($item->record, $template, $marker);
+		$markerArray = $formatter->getItemMarkerArrayWrapped($item->record, $confId , $ignore, $marker.'_', $item->getColumnNames());
 
 		// subparts erzeugen
 		$wrappedSubpartArray = $subpartArray = array();
@@ -77,28 +71,19 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 	}
 
 	/**
-	 * Die Methode kann von Kindklassen verwendet werden.
-	 * @param string $template das HTML-Template
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $item
-	 * @param tx_rnbase_util_FormatUtil $formatter der zu verwendente Formatter
-	 * @param string $confId Pfad der TS-Config
-	 * @param string $marker Name des Markers
-	 * @return String das geparste Template
-	 */
-	protected function prepareTemplate($template, $item, $formatter, $confId, $marker) {
-		return $template;
-	}
-	/**
 	 * Führt vor dem parsen Änderungen am Model durch.
 	 *
-	 * @param Tx_Rnbase_Domain_Model_DomainInterface $item
+	 * @param tx_rnbase_model_base &$item
 	 * @param tx_rnbase_configurations &$configurations
 	 * @param string &$confId
 	 * @return void
 	 */
 	protected function prepareItem(
-		Tx_Rnbase_Domain_Model_RecordInterface $item, tx_rnbase_configurations $configurations, $confId) {
-		if (!$item->isValid()) {
+		tx_rnbase_model_base &$item,
+		tx_rnbase_configurations &$configurations,
+		$confId
+	) {
+		if (empty($item->record)) {
 			return;
 		}
 
@@ -117,45 +102,22 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 
 		foreach ($mapFields as $field) {
 			$newField = '_' . str_replace('.', '_', $field);
-			$value = $item->getProperty($field);
+			$value = $item->record[$field];
 			if (in_array($field, $dotFieldFields)) {
-				$item->setProperty($newField, $value);
+				$item->record[$newField] = $value;
 			}
 			if (in_array($field, $dotValueFields)) {
-				$item->setProperty($newField, str_replace('.', '_', $value));
+				$item->record[$newField] = str_replace('.', '_', $value);
 			}
 		}
 	}
 
 
 	/**
-	 * Ermöglicht es eigene Subparts zu definieren und deren Sichtbarkeit per Typoscript
-	 * zu steuern.
-	 * Mögliche Konfiguration:
-	 * lib.yourplugin.youritem {
-	 *   subparts.isstarted.marker.visible = TRUE
-	 *   subparts.isstarted.marker.hidden = FALSE
-	 *   subparts.isstarted.visible = TEXT
-	 *   subparts.isstarted.visible.value = 1
-	 *   subparts.isstarted.visible.if {
-	 *     value.cObject = TEXT
-	 *     value.cObject.dataWrap = {date:U}
-	 *     isLessThan.cObject = TEXT
-	 *     isLessThan.cObject.field = startdate
-	 *   }
-	 * }
-	 * Daraus ergeben sich folgende Subparts:
-	 * ###ITEM_ISSTARTED_TRUE###
-	 * ###ITEM_ISSTARTED_TRUE###
-	 * und
-	 * ###ITEM_ISSTARTED_FALSE###
-	 * ###ITEM_ISSTARTED_FALSE###
-	 * Der Prefix ITEM ist natürlich vom Plugin abhängig.
-	 *
 	 * @param array $wrappedSubpartArray das HTML-Template
 	 * @param array $subpartArray das HTML-Template
 	 * @param string $template das HTML-Template
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $item
+	 * @param tx_rnbase_model_base $item
 	 * @param tx_rnbase_util_FormatUtil $formatter der zu verwendente Formatter
 	 * @param string $confId Pfad der TS-Config
 	 * @param string $marker Name des Markers
@@ -166,7 +128,7 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 	) {
 		$configurations = $formatter->getConfigurations();
 		$pluginData = $configurations->getCObj()->data;
-		$configurations->getCObj()->data = $item->getRecord();
+		$configurations->getCObj()->data = $item->record;
 		$emptyArray = array('', '');
 		$emptyString = '';
 
@@ -198,7 +160,7 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 	/**
 	 * Links vorbereiten
 	 *
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $item
+	 * @param tx_rnbase_model_base $item
 	 * @param string $marker
 	 * @param array $markerArray
 	 * @param array $wrappedSubpartArray
@@ -206,11 +168,10 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 	 * @param tx_rnbase_util_FormatUtil $formatter
 	 */
 	protected function prepareLinks($item, $marker, &$markerArray, &$subpartArray, &$wrappedSubpartArray, $confId, $formatter, $template) {
-		$configurations = $formatter->getConfigurations();
-		$pluginData = $configurations->getCObj()->data;
-		$configurations->getCObj()->data = $item->getRecord();
+		$pluginData = $formatter->getConfigurations()->getCObj()->data;
+		$formatter->getConfigurations()->getCObj()->data = $item->record;
 
-		$linkIds = $configurations->getKeyNames($confId.'links.');
+		$linkIds = $formatter->getConfigurations()->getKeyNames($confId.'links.');
 		for ($i=0, $cnt=count($linkIds); $i < $cnt; $i++) {
 			$linkId = $linkIds[$i];
 			// Check if link is defined in template
@@ -221,34 +182,34 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 
 			// Die Parameter erzeugen
 			$params = array();
-			$paramMap = (array) $configurations->get($linkConfId . '._cfg.params.');
+			$paramMap = (array) $formatter->getConfigurations()->get($linkConfId . '._cfg.params.');
 			foreach ($paramMap As $paramName => $colName) {
-				if (is_scalar($colName) && array_key_exists($colName, $item->getRecord())) {
-					$params[$paramName] = $item->getProperty($colName);
+				if (is_scalar($colName) && array_key_exists($colName, $item->record)) {
+					$params[$paramName] = $item->record[$colName];
 				} elseif (is_array($colName)) {
 					$paramName = substr($paramName, 0, strlen($paramName)-1);
 					$params[$paramName] = $this->createParam($paramName, $colName, $item);
 				}
 			}
 			// check for charbrowser config and add the parameter
-			if ($configurations->getBool($linkConfId . '._cfg.charbrowser')) {
-				$cbId = $configurations->get($linkConfId . '._cfg.charbrowser.cbid');
+			if ($formatter->getConfigurations()->getBool($linkConfId . '._cfg.charbrowser')) {
+				$cbId = $formatter->getConfigurations()->get($linkConfId . '._cfg.charbrowser.cbid');
 				$cbId = empty($cbId) ? 'charpointer' : $cbId;
-				$cbColname = $configurations->get($linkConfId . '._cfg.charbrowser.colname');
+				$cbColname = $formatter->getConfigurations()->get($linkConfId . '._cfg.charbrowser.colname');
 				$cbColname = empty($cbColname) ? 'uid' : $cbColname;
 				$params[$cbId] = strtoupper(substr((string) $item->getProperty($cbColname), 0, 1));
 			}
 
-			if ($configurations->getBool($linkConfId . '.skipPersistedCheck') ||  $item->isPersisted()) {
+			if ($item->isPersisted()) {
 				$this->initLink($markerArray, $subpartArray, $wrappedSubpartArray, $formatter, $confId, $linkId, $marker, $params, $template);
 			}
 			else {
 				$linkMarker = $marker . '_' . strtoupper($linkId) . 'LINK';
-				$remove = intval($configurations->get($linkConfId . '.removeIfDisabled'));
+				$remove = intval($formatter->getConfigurations()->get($linkConfId . '.removeIfDisabled'));
 				$this->disableLink($markerArray, $subpartArray, $wrappedSubpartArray, $linkMarker, $remove > 0);
 			}
 		}
-		$configurations->getCObj()->data = $pluginData;
+		$formatter->getConfigurations()->getCObj()->data = $pluginData;
 	}
 
 	/**
@@ -288,6 +249,6 @@ class tx_rnbase_util_SimpleMarker extends tx_rnbase_util_BaseMarker {
 }
 
 
-if (defined('TYPO3_MODE') && $GLOBALS['TYPO3_CONF_VARS'][TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_SimpleMarker.php'])	{
-	include_once($GLOBALS['TYPO3_CONF_VARS'][TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_SimpleMarker.php']);
+if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_SimpleMarker.php'])	{
+	include_once($TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_SimpleMarker.php']);
 }

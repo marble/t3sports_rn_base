@@ -22,10 +22,10 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_model_data');
 
 /**
- * TODO: extend from Tx_Rnbase_Util_TCA
  * @package TYPO3
  * @subpackage tx_rnbase
  * @author Hannes Bochmann <hannes.bochmann@dmk-business.de>
@@ -93,65 +93,6 @@ class tx_rnbase_util_TCA {
 		}
 		return $GLOBALS['TCA'][$tableName]['ctrl']['crdate'];
 	}
-	/**
-	 * Liefert den Spaltennamen für die sortierung der Tabelle.
-	 *
-	 * @param string $tableName
-	 * @return string
-	 */
-	public static function getSortbyFieldForTable($tableName) {
-		if (empty($GLOBALS['TCA'][$tableName]) || empty($GLOBALS['TCA'][$tableName]['ctrl']['sortby'])) {
-			return '';
-		}
-		return $GLOBALS['TCA'][$tableName]['ctrl']['sortby'];
-	}
-	/**
-	 * Liefert alle EnableColumns einer Tabelle
-	 *
-	 * @param string $tableName
-	 *
-	 * @return array Array with values:
-	 *     'fe_group' => 'fe_group',
-	 *     'delete' =>'deleted',
-	 *     'disabled' =>'hidden',
-	 *     'starttime' => 'starttime',
-	 *     'endtime' => 'endtime'
-	 */
-	protected static function getEnableColumnsForTable($tableName) {
-		if (
-			empty($GLOBALS['TCA'][$tableName]) ||
-			empty($GLOBALS['TCA'][$tableName]['ctrl']['enablecolumns'])
-		) {
-			return array();
-		}
-		return $GLOBALS['TCA'][$tableName]['ctrl']['enablecolumns'];
-	}
-	/**
-	 * Liefert den Spaltennamen für die gelöschte elemente der Tabelle.
-	 *
-	 * @param string $tableName
-	 *
-	 * @return string
-	 */
-	public static function getDeletedFieldForTable($tableName)
-	{
-		$cols = self::getEnableColumnsForTable($tableName);
-
-		return empty($cols['delete']) ? '' : $cols['delete'];
-	}
-	/**
-	 * Liefert den Spaltennamen für die deaktivierte elemente der Tabelle.
-	 *
-	 * @param string $tableName
-	 *
-	 * @return string
-	 */
-	public static function getDisabledFieldForTable($tableName)
-	{
-		$cols = self::getEnableColumnsForTable($tableName);
-
-		return empty($cols['disabled']) ? '' : $cols['disabled'];
-	}
 
 	/**
 	 * Load TCA for a specific table. Since T3 6.1 the complete TCA is loaded.
@@ -172,13 +113,13 @@ class tx_rnbase_util_TCA {
 	/**
 	 * validates the data of a model with the tca definition of a its table.
 	 *
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $model
+	 * @param tx_rnbase_model_base $model
 	 * @param array $options
 	 *     only_record_fields: validates only fields included in the record
 	 * @return bolean
 	 */
 	public static function validateModel(
-		Tx_Rnbase_Domain_Model_RecordInterface $model,
+		tx_rnbase_model_base $model,
 		$options = NULL
 	) {
 		return self::validateRecord(
@@ -312,22 +253,6 @@ class tx_rnbase_util_TCA {
 		}
 
 		return $columns;
-	}
-
-	/**
-	 * Eleminate non-TCA-defined columns from given data
-	 *
-	 * Doesn't do anything if no TCA columns are found.
-	 *
-	 * @param array $data Data to be filtered
-	 * @return array Data now containing only TCA-defined columns
-	 */
-	public static function eleminateNonTcaColumns(
-		Tx_Rnbase_Domain_Model_RecordInterface $model,
-		array $data
-	) {
-		tx_rnbase::load('tx_rnbase_util_Arrays');
-		return tx_rnbase_util_Arrays::removeNotIn($data, $model->getColumnNames());
 	}
 }
 

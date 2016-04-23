@@ -32,12 +32,12 @@ interface tx_rnbase_maps_ICoord {
 	 * Returns the latitude
 	 * @return float
 	 */
-	public function getLatitude();
+	function getLatitude();
 	/**
 	 * Returns the longitude
 	 * @return float
 	 */
-	public function getLongitude();
+	function getLongitude();
 }
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/maps/class.tx_rnbase_maps_ICoord.php']) {

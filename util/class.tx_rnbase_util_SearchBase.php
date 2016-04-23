@@ -21,8 +21,8 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
+
 tx_rnbase::load('tx_rnbase_util_DB');
-tx_rnbase::load('Tx_Rnbase_Database_Connection');
 tx_rnbase::load('tx_rnbase_util_Strings');
 
 define('SEARCH_FIELD_JOINED', 'JOINED'); // Sonderfall Freitextsuche in mehreren Feldern
@@ -36,6 +36,7 @@ define('OP_IN_INT', 'IN');
 define('OP_IN_SQL', 'IN SQL');
 define('OP_NOTIN_SQL', 'NOTIN SQL');
 define('OP_INSET_INT', 'FIND_IN_SET');
+//define('OP_NOTINSET_INT', 'NOTFIND_IN_SET');
 define('OP_LIKE', 'LIKE');
 define('OP_LIKE_CONST', 'OP_LIKE_CONST');
 define('OP_EQ_INT', '=');
@@ -170,24 +171,14 @@ abstract class tx_rnbase_util_SearchBase {
 							tx_rnbase_util_Misc::mayday('JOINED field required data array. Check up your search config.', 'rn_base');
 						$joinedValues = array_values($joinedValues);
 						for($i=0, $cnt=count($joinedValues); $i < $cnt; $i++) {
-							$wherePart = Tx_Rnbase_Database_Connection::getInstance()->setSingleWhereField(
-								$this->useAlias() ? $tableAlias : $this->tableMapping[$tableAlias],
-								$operator,
-								$col,
-								$joinedValues[$i]
-							);
+							$wherePart = tx_rnbase_util_DB::setSingleWhereField($this->useAlias() ? $tableAlias : $this->tableMapping[$tableAlias], $operator, $col, $joinedValues[$i]);
 							if (trim($wherePart) !== '') {
 								$where .= ' AND ' . $wherePart;
 							}
 						}
 					}
 					else {
-						$wherePart = Tx_Rnbase_Database_Connection::getInstance()->setSingleWhereField(
-							$this->useAlias() ? $tableAlias : $this->tableMapping[$tableAlias],
-							$operator,
-							$col,
-							$value
-						);
+						$wherePart = tx_rnbase_util_DB::setSingleWhereField($this->useAlias() ? $tableAlias : $this->tableMapping[$tableAlias], $operator, $col, $value);
 						if (trim($wherePart) !== '') {
 							$where .= ' AND ' . $wherePart;
 						}
@@ -199,23 +190,14 @@ abstract class tx_rnbase_util_SearchBase {
 		if(is_array($joinedFields)) {
 			foreach ($joinedFields As $joinedField) {
 				// Ignore invalid queries
-				if(!isset($joinedField['value']) || !isset($joinedField['operator']) || 
-						!isset($joinedField['fields']) || !$joinedField['fields']) continue;
+				if(!isset($joinedField['value']) || !isset($joinedField['operator'])) continue;
 
 				if($joinedField['operator'] == OP_INSET_INT) {
 					// Values splitten und einzelne Abfragen mit OR verbinden
-					$addWhere = Tx_Rnbase_Database_Connection::getInstance()->searchWhere(
-						$joinedField['value'],
-						implode(',', $joinedField['fields']),
-						'FIND_IN_SET_OR'
-					);
+					$addWhere = tx_rnbase_util_DB::searchWhere($joinedField['value'], implode(',', $joinedField['fields']), 'FIND_IN_SET_OR');
 				}
 				else {
-					$addWhere = Tx_Rnbase_Database_Connection::getInstance()->searchWhere(
-						$joinedField['value'],
-						implode(',', $joinedField['fields']),
-						$joinedField['operator']
-					);
+					$addWhere = tx_rnbase_util_DB::searchWhere($joinedField['value'], implode(',', $joinedField['fields']), $joinedField['operator']);
 				}
 				if ($addWhere) {
 					$where .= ' AND ' . $addWhere;
@@ -224,10 +206,6 @@ abstract class tx_rnbase_util_SearchBase {
 		}
 		if(isset($customFields)) {
 			$where .= ' AND ' . $customFields;
-		}
-
-		if ($options['enableFieldsForAdditionalTableAliases']) {
-			$where .= $this->setEnableFieldsForAdditionalTableAliases($tableAliases, $options);
 		}
 
 		$sqlOptions = array();
@@ -264,8 +242,6 @@ abstract class tx_rnbase_util_SearchBase {
 			$sqlOptions['sqlonly'] = $options['sqlonly'];
 		if($options['union'])
 			$sqlOptions['union'] = $options['union'];
-		if ($options['array_object'])
-			$sqlOptions['array_object'] = $options['array_object'];
 		if(!isset($options['count']) && is_array($options['orderby'])) {
 			// Aus dem Array einen String bauen
 			$orderby = array();
@@ -317,12 +293,7 @@ abstract class tx_rnbase_util_SearchBase {
 			)
 		) {
 			$sqlOptions['sqlonly'] = 1;
-			$query = Tx_Rnbase_Database_Connection::getInstance()->doSelect(
-				$what,
-				$from,
-				$sqlOptions,
-				$options['debug'] ? 1 : 0
-			);
+			$query = tx_rnbase_util_DB::doSelect($what, $from, $sqlOptions, $options['debug'] ? 1 : 0);
 			$what = 'COUNT(*) AS cnt';
 			$from = '(' . $query . ') AS COUNTWRAP';
 			$sqlOptions = array(
@@ -331,12 +302,7 @@ abstract class tx_rnbase_util_SearchBase {
 			);
 		}
 
-		$result = Tx_Rnbase_Database_Connection::getInstance()->doSelect(
-			$what,
-			$from,
-			$sqlOptions,
-			$options['debug'] ? 1 : 0
-		);
+		$result = tx_rnbase_util_DB::doSelect($what, $from, $sqlOptions, $options['debug'] ? 1 : 0);
 		if (isset($options['sqlonly'])) return $result;
 		// else:
 		return isset($options['count']) ? $result[0]['cnt'] : $result;
@@ -419,11 +385,19 @@ abstract class tx_rnbase_util_SearchBase {
 	 * @param array $options
 	 */
 	protected function addGenericTableMappings(&$tableMapping, $options) {
+		// Zuerst die Basistabelle
+//		$baseAlias = $options['basetablealias'];
+//		$baseTable = $options['basetable'];
+//		if($baseAlias && $baseTable)
+//			$tableMapping[$baseAlias] = $baseTable;
+
 		$aliasArr = $options['alias'];
 		if(is_array($aliasArr))
 			foreach ($aliasArr As $alias => $data) {
 				$tableMapping[$alias] = $data['table'];
 			}
+
+//		if(!count($tableMapping)) throw new Exception('No search tables configured!');
 	}
 
 	/**
@@ -493,6 +467,7 @@ abstract class tx_rnbase_util_SearchBase {
 			$ret = 'count('. $distinct . $cntWhat.') as cnt';
 		}
 		return $ret;
+//		return isset($options['count']) ? 'count('. $distinct .$table.'.'.$cntWhat.') as cnt' : $distinct.$table.'.*'.$rownum;
 	}
 
 	/**
@@ -523,38 +498,13 @@ abstract class tx_rnbase_util_SearchBase {
 	}
 
 	/**
-	 * @param array $tableAliases
-	 * @param array $options
-	 * @return string
-	 */
-	protected function setEnableFieldsForAdditionalTableAliases(array $tableAliases, array $options) {
-		// FIXME: keys für Optionen sind grundsätzlich klein geschrieben
-		$tableAliasesToSetEnableFields = tx_rnbase_util_Strings::trimExplode(
-			',', $options['enableFieldsForAdditionalTableAliases']
-		);
-		$where = '';
-		foreach ($tableAliasesToSetEnableFields as $tableAliaseToSetEnableFields) {
-			if (isset($tableAliases[$tableAliaseToSetEnableFields])) {
-				$tableAlias = $this->useAlias() ? $tableAliaseToSetEnableFields : '';
-				$where .= Tx_Rnbase_Database_Connection::getInstance()->handleEnableFieldsOptions(
-					$options,
-					$this->tableMapping[$tableAliaseToSetEnableFields],
-					$tableAlias
-				);
-			}
-		}
-
-		return $where;
-	}
-
-	/**
 	 * Optionen aus der TS-Config setzen
 	 *
 	 * @param array $options
 	 * @param tx_rnbase_configurations $configurations
 	 * @param string $confId Id der TS-Config z.B. myview.options.
 	 */
-	static function setConfigOptions(&$options, $configurations, $confId) {
+	static function setConfigOptions(&$options, &$configurations, $confId) {
 		$cfgOptions = $configurations->get($confId);
 		if(is_array($cfgOptions))
 			foreach($cfgOptions As $option => $cfg) {
@@ -652,6 +602,8 @@ abstract class tx_rnbase_util_SearchBase {
 					foreach ($data as $op => $value) {
 						$fields[$tableAlias.'.'.$colName][constant($op)] = $value;
 					}
+// 					list($op, $value) = each($data);
+// 					$fields[$tableAlias.'.'.$colName][constant($op)] = $value;
 				}
 			}
 	}
@@ -663,7 +615,7 @@ abstract class tx_rnbase_util_SearchBase {
 	 * @param tx_rnbase_configurations $configurations
 	 * @param string $confId Id der TS-Config z.B. myview.fields.
 	 */
-	static function setConfigFields(&$fields, $configurations, $confId) {
+	static function setConfigFields(&$fields, &$configurations, $confId) {
 		$cfgFields = $configurations->get($confId);
 		self::setConfigFieldsByArray($fields, $cfgFields);
 	}

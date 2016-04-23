@@ -22,8 +22,7 @@
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
-tx_rnbase::load('Tx_Rnbase_Backend_Utility');
-tx_rnbase::load('Tx_Rnbase_Backend_Utility_Icons');
+
 
 /**
  */
@@ -37,7 +36,7 @@ class tx_rnbase_mod_Util {
 	public static function getModuleValue($key, tx_rnbase_mod_IModule $mod, $options=array()) {
 		$changedSettings = is_array($options['changed']) ? $options['changed'] : array();
 		$type = isset($options['type']) ? $options['type'] : '';
-		$modData = Tx_Rnbase_Backend_Utility::getModuleData(array ($key => ''), $changedSettings, $mod->getName(), $type);
+		$modData = t3lib_BEfunc::getModuleData(array ($key => ''), $changedSettings, $mod->getName(), $type);
 		return isset($modData[$key]) ? $modData[$key] : NULL;
 	}
 	/**
@@ -60,7 +59,8 @@ class tx_rnbase_mod_Util {
 	 * @return string The full HTML tag (usually a <span>)
 	 */
 	public static function getSpriteIcon($iconName, array $options = array(), array $overlays = array()) {
-		return Tx_Rnbase_Backend_Utility_Icons::getSpriteIcon($iconName, $options, $overlays);
+		// TODO: add support for older TYPO3 versions
+		return t3lib_iconWorks::getSpriteIcon($iconName, $options, $overlays);
 	}
 	/**
 	 * Returns a string with all available Icons in TYPO3 system. Each icon has a tooltip with its identifier.
@@ -93,7 +93,7 @@ class tx_rnbase_mod_Util {
 		$pid = isset($aOptions['pid']) && $aOptions['pid'] ? $aOptions['pid'] : 0;
 
 		// Build select box items
-		$aData['selector'] = Tx_Rnbase_Backend_Utility::getFuncMenu(
+		$aData['selector'] = t3lib_BEfunc::getFuncMenu(
 			$pid, 'SET['.$id.']', $selectedItem, $aItems
 		);
 
@@ -104,6 +104,7 @@ class tx_rnbase_mod_Util {
 		//@todo wozu die alte abfrage? return $defId==$id ? FALSE : $selectedItem;
 		return $selectedItem;
 	}
+
 }
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/mod/class.tx_rnbase_mod_Util.php'])	{

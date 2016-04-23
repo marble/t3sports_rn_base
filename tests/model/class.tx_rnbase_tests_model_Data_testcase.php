@@ -22,6 +22,7 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_tests_BaseTestCase');
 tx_rnbase::load('tx_rnbase_model_data');
 
@@ -146,20 +147,6 @@ class tx_rnbase_tests_model_Data_testcase
 		// after set a value without calling the property methods, the model has to be clean.
 		$model->record['first_name'];
 		$this->assertFalse($model->isDirty());
-	}
-	/**
-	 * @test
-	 */
-	public function testRecordDirectAccessForBackwardsCompatibility() {
-		$model = $this->getModelInstance();
-		// check data without manipulation
-		$this->assertSame('John', $model->record['first_name']);
-		// check data after property change
-		$model->setFirstName('Jonny');
-		$this->assertSame('Jonny', $model->record['first_name']);
-		// check backwards compatibility for direct record access
-		$model->record['first_name'] = 'Jonas';
-		$this->assertSame('Jonas', $model->record['first_name']);
 	}
 
 }

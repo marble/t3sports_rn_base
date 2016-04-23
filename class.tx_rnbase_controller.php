@@ -1,4 +1,5 @@
 <?php
+
 /***************************************************************
  *  Copyright notice
  *
@@ -45,11 +46,11 @@
  * Controllers of this kind are called from TS Setup in the typical position
  * "tt_content.list.20.pluginKey" exactly like the traditional tslib::pi_base() plugins.
  *
- * The pluginKey is defined by the function tx_rnbase_util_Extensions::addPlugin()
+ * The pluginKey is defined by the function t3lib_extMgm::addPlugin()
  * within the file ext_tables.php as second element of the array
  * that is handled as first parameter to the function.
  *
- * tx_rnbase_util_Extensions::addPlugin(array(pluginLabel, pluginKey), list_type)
+ * t3lib_extMgm::addPlugin(array(pluginLabel, pluginKey), list_type)
  *
  * -----------------------------------------
  * Easily controlled by the action classes
@@ -98,16 +99,16 @@
  * @subpackage rn_base
  */
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
 tx_rnbase::load('tx_rnbase_util_Misc');
 tx_rnbase::load('tx_rnbase_util_Arrays');
-tx_rnbase::load('tx_rnbase_util_Strings');
-
 
 
 class tx_rnbase_controller {
 
 	var $configurationsClassName = 'tx_rnbase_configurations'; // You may overwrite this in your subclass with an own configurations class.
+//	var $parametersClassName = 'tx_lib_parameters'; // Typically you don't need to make a subclass of this.
 	var $parameters;
 	var $configurations;
 	var $defaultAction = 'defaultAction';
@@ -218,6 +219,7 @@ class tx_rnbase_controller {
 		$actions = $this->_findAction($parameters, $configurations);
 		if(!isset($actions))
 			return $this->getUnknownAction();
+
 		$out = '';
 		if(is_array($actions))
 			foreach($actions As $actionName){
@@ -252,14 +254,9 @@ class tx_rnbase_controller {
 		catch(tx_rnbase_exception_Skip $e) {
 			$ret = '';
 		}
-		// @deprecated support for tx_rnbase_exception_ItemNotFound404 will be dropped in TYPO3 7.6
 		catch(tx_rnbase_exception_ItemNotFound404 $e) {
-			$this->getTsfe()->pageNotFoundAndExit('tx_rnbase_exception_ItemNotFound404 was thrown');
-		}
-		catch (TYPO3\CMS\Core\Error\Http\PageNotFoundException $e) {
-			$this->getTsfe()->pageNotFoundAndExit(
-				'TYPO3\\CMS\\Core\\Error\\Http\\PageNotFoundException was thrown'
-			);
+			$this->set404HeaderAndRobotsNoIndex();
+			$ret = $e->getMessage();
 		}
 		catch(Exception $e) {
 			$ret = $this->handleException($actionName, $e, $configurations);
@@ -269,10 +266,16 @@ class tx_rnbase_controller {
 	}
 
 	/**
-	 * @return TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController
+	 * @return void
 	 */
-	protected function getTsfe() {
-		return tx_rnbase_util_TYPO3::getTSFE();
+	protected function set404HeaderAndRobotsNoIndex() {
+		// we need to set the robots meta tag in additionalHeaderData
+		// as the meta tags have already been rendered
+		$GLOBALS['TSFE']->additionalHeaderData['rnBaseRobots'] =
+			'<meta name="robots" content="NOINDEX,FOLLOW">';
+
+		$httpUtilityClass = tx_rnbase_util_TYPO3::getHttpUtilityClass();
+		$httpUtilityClass::setResponseCode($httpUtilityClass::HTTP_STATUS_404);
 	}
 
 	/**
@@ -345,23 +348,18 @@ class tx_rnbase_controller {
 	 * @param     object     the configurations objet
 	 * @return    array     an array with the actions or NULL
 	 */
-	protected function _findAction($parameters, $configurations) {
+	function _findAction($parameters, $configurations) {
 		// What should be preferred? Config or Request?
 		// An action from parameter is preferred
 		$action = !intval($configurations->get('ignoreActionParam')) ? $this->_getParameterAction($parameters) : FALSE;
 		if(!$action) {
 			$action = $configurations->get('action');
 		}
-		else {
-			// Bei Actions aus dem Request kodierte Klassen korrigieren
-			$action = str_replace('\\\\', '\\', $action);
-		}
-
 		// Falls es mehrere Actions sind den String splitten
 		if($action)
-			$action = tx_rnbase_util_Strings::trimExplode(',', $action);
+			$action = t3lib_div::trimExplode(',', $action);
 		if(is_array($action) && count($action) == 1) {
-			$action = tx_rnbase_util_Strings::trimExplode('|', $action[0]); // Nochmal mit Pipe versuchen
+			$action = t3lib_div::trimExplode('|', $action[0]); // Nochmal mit Pipe versuchen
 		}
 		// If there is still no action we use defined defaultAction
 		$action = !$action ? $configurations->get('defaultAction') : $action;
@@ -418,7 +416,9 @@ class tx_rnbase_controller {
 		$parameters->setQualifier($configurations->getQualifier());
 
 		// get parametersArray for defined qualifier
-		$parametersArray = tx_rnbase_parameters::getPostAndGetParametersMerged($configurations->getQualifier());
+		$parametersArray = tx_rnbase_util_TYPO3::isTYPO43OrHigher() ?
+				t3lib_div::_GPmerged($configurations->getQualifier()) :
+				t3lib_div::_GPmerged($configurations->getQualifier());
 		if($configurations->isUniqueParameters() && array_key_exists($configurations->getPluginId(), $parametersArray)) {
 			$parametersArray = $parametersArray[$configurations->getPluginId()];
 		}

@@ -22,9 +22,10 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_Dates');
 
-class tx_rnbase_tests_util_Dates_testcase extends Tx_Phpunit_TestCase {
+class tx_rnbase_tests_util_Dates_testcase extends tx_phpunit_testcase {
 
 	public function test_datetime_getTimeStamp() {
 		$tstamp = tx_rnbase_util_Dates::getTimeStamp(1970, 1, 1, 1, 0, 0, 'CET');
@@ -32,20 +33,21 @@ class tx_rnbase_tests_util_Dates_testcase extends Tx_Phpunit_TestCase {
 		$tstamp = tx_rnbase_util_Dates::getTimeStamp(1970, 1, 1, 1, 0, 0, 'UTC');
 		$this->assertEquals(3600, $tstamp);
 	}
-
+	
 	public function test_datetime_mysql2tstamp() {
 		$tstamp = tx_rnbase_util_Dates::datetime_mysql2tstamp('1970-01-1 01:00:00', 'CET');
 		$this->assertEquals(0, $tstamp);
 		$tstamp = tx_rnbase_util_Dates::datetime_mysql2tstamp('1970-01-1 00:00:00', 'UTC');
 		$this->assertEquals(0, $tstamp);
 	}
-
+	
 	public function test_dateConv() {
 		$zeit1 = '2009-02-11';
 		$tstamp1 = tx_rnbase_util_Dates::date_mysql2tstamp($zeit1);
 		$zeit2 = tx_rnbase_util_Dates::date_tstamp2mysql($tstamp1);
 
 //		$sDate = gmstrftime("%d.%m.%Y", $tstamp1);
+//		t3lib_utility_Debug::debug($sDate, 'tx_rnbase_tests_dates_testcase :: test_dateConv'); // TODO: remove me
 		$this->assertEquals($zeit1, $zeit2);
 	}
 	public function test_convert4TCA2Timestamp() {
@@ -59,35 +61,15 @@ class tx_rnbase_tests_util_Dates_testcase extends Tx_Phpunit_TestCase {
 		$record = array('datetime' => '1319112000');
 		tx_rnbase_util_Dates::convert4TCA2DateTime($record, array('datetime'), TRUE);
 		$this->assertEquals('2011-10-20 12:00:00', $record['datetime']);
-
+		
 	}
 	public function test_convert4TCA2Date() {
 		$record = array('date' => '1319068800');
 		tx_rnbase_util_Dates::convert4TCA2Date($record, array('date'), TRUE);
 		$this->assertEquals('2011-10-20', $record['date']);
-
+		
 	}
 
-	/**
-	 * @param string $mysqlDate
-	 * @param int $expectedTimestamp
-	 *
-	 * @dataProvider dataProviderDateMysql2Tstamp
-	 */
-	public function test_date_mysql2tstamp($mysqlDate, $expectedTimestamp) {
-		self::assertSame($expectedTimestamp, tx_rnbase_util_Dates::date_mysql2tstamp($mysqlDate));
-	}
-
-	/**
-	 * @return array
-	 */
-	public function dataProviderDateMysql2Tstamp() {
-		return array(
-			array('1985-08-14', 492818400),
-			array('aa-bb-cccc', NULL),
-			array('', NULL),
-		);
-	}
 }
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/tests/util/class.tx_rnbase_tests_util_Dates_testcase.php']) {

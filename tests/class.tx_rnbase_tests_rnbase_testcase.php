@@ -22,8 +22,9 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
-class tx_rnbase_tests_rnbase_testcase extends Tx_Phpunit_TestCase {
+class tx_rnbase_tests_rnbase_testcase extends tx_phpunit_testcase {
 
 	function test_makeInstanceSimpleObject() {
 		$obj = tx_rnbase::makeInstance('tx_rnbase_util_ListBuilder');
@@ -44,8 +45,7 @@ class tx_rnbase_tests_rnbase_testcase extends Tx_Phpunit_TestCase {
 	}
 	private function isExtBasePossible() {
 		tx_rnbase::load('tx_rnbase_util_TYPO3');
-		// TODO: bessere Testklasse finden
-		return FALSE && tx_rnbase_util_TYPO3::isExtLoaded('extbase') &&
+		return tx_rnbase_util_TYPO3::isExtLoaded('extbase') &&
 			tx_rnbase_util_TYPO3::isExtMinVersion('t3sponsors', 2001);
 	}
 }

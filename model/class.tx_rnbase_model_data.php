@@ -22,7 +22,8 @@
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-tx_rnbase::load('Tx_Rnbase_Domain_Model_DataInterface');
+require_once t3lib_extMgm::extPath('rn_base',  'class.tx_rnbase.php');
+tx_rnbase::load('tx_rnbase_util_Misc');
 
 /**
  * Basic model with geter's and seter's
@@ -32,16 +33,12 @@ tx_rnbase::load('Tx_Rnbase_Domain_Model_DataInterface');
  * @method boolean hasUid()
  * @method tx_rnbase_model_data unsUid()
  *
- * @deprecated: IS NO LONGER BEING DEVELOPED!!!
- *              please use Tx_Rnbase_Domain_Model_Data
- *              THIS CLASS WILL BE DROPPED IN THE FUTURE!!!
- *
  * @package tx_rnbase
  * @subpackage tx_rnbase_model
  * @author Michael Wagner <michael.wagner@dmk-ebusiness.de>
  */
 class tx_rnbase_model_data
-	implements Tx_Rnbase_Domain_Model_DataInterface, IteratorAggregate {
+	implements IteratorAggregate {
 
 	/**
 	 * A flag indication if the model was modified after initialisation
@@ -210,8 +207,8 @@ class tx_rnbase_model_data
 	 * @return string
 	 */
 	protected function underscore($string) {
-		tx_rnbase::load('tx_rnbase_util_Strings');
-		return tx_rnbase_util_Strings::camelCaseToLowerCaseUnderscored($string);
+		return tx_rnbase_util_Misc::camelCaseToLowerCaseUnderscored($string);
+		// return strtolower(preg_replace('/(.)([A-Z])/', "$1_$2", $string));
 	}
 
 	/**

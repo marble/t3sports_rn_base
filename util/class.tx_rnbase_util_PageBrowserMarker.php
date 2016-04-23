@@ -22,6 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_BaseMarker');
 tx_rnbase::load('tx_rnbase_util_PageBrowser');
 tx_rnbase::load('tx_rnbase_util_Math');
@@ -32,7 +33,8 @@ tx_rnbase::load('tx_rnbase_util_Math');
  * Contains utility functions for HTML-Forms
  */
 class tx_rnbase_util_PageBrowserMarker implements PageBrowserMarker {
-	private $pagePartsDef = array('normal', 'current', 'first', 'last', 'prev', 'next', 'prev_bullets', 'next_bullets');
+	private $pdid;
+	private $pagePartsDef = array('normal', 'current', 'first', 'last', 'prev', 'next');
 
 	/**
 	 * Erstellung des PageBrowserMarkers
@@ -49,38 +51,6 @@ class tx_rnbase_util_PageBrowserMarker implements PageBrowserMarker {
 
 	/**
 	 * Liefert die Limit-Angaben für die DB-Anfrage
-	 *
-	 * 	<!-- ###PAGEBROWSER### START -->
-	 *		<div class="pagebrowser">
-	 *			<p>###PAGEBROWSER_RANGEFROM###-###PAGEBROWSER_RANGETO### von ###PAGEBROWSER_COUNT### ###LABEL_RECIPES###</p>
-	 *			<ul>
-	 *				###PAGEBROWSER_FIRST_PAGE###
-	 *					<li>###PAGEBROWSER_FIRST_PAGE_LINK###&laquo;###PAGEBROWSER_FIRST_PAGE_LINK###</li>
-	 *				###PAGEBROWSER_FIRST_PAGE###
-	 *				###PAGEBROWSER_PREV_PAGE###
-	 *					<li>###PAGEBROWSER_PREV_PAGE_LINK###&#x8B;###PAGEBROWSER_PREV_PAGE_LINK###</li>
-	 *				###PAGEBROWSER_PREV_PAGE###
-	 *				###PAGEBROWSER_PREV_BULLETS_PAGE###
-	 *					<li>...</li>
-	 *				###PAGEBROWSER_PREV_BULLETS_PAGE###
-	 *				###PAGEBROWSER_CURRENT_PAGE###
-	 *					<li><span class="current">###PAGEBROWSER_CURRENT_PAGE_NUMBER###</span></li>
-	 *				###PAGEBROWSER_CURRENT_PAGE###
-	 *				###PAGEBROWSER_NORMAL_PAGE###
-	 *					<li>###PAGEBROWSER_NORMAL_PAGE_LINK######PAGEBROWSER_NORMAL_PAGE_NUMBER######PAGEBROWSER_NORMAL_PAGE_LINK###</li>
-	 *				###PAGEBROWSER_NORMAL_PAGE###
-	 *				###PAGEBROWSER_NEXT_BULLETS_PAGE###
-	 *					<li>...</li>
-	 *				###PAGEBROWSER_NEXT_BULLETS_PAGE###
-	 *				###PAGEBROWSER_NEXT_PAGE###
-	 *					<li>###PAGEBROWSER_NEXT_PAGE_LINK###&#x9B;###PAGEBROWSER_NEXT_PAGE_LINK###</li>
-	 *				###PAGEBROWSER_NEXT_PAGE###
-	 *				###PAGEBROWSER_LAST_PAGE###
-	 *					<li>###PAGEBROWSER_LAST_PAGE_LINK###&raquo;###PAGEBROWSER_LAST_PAGE_LINK###</li>
-	 *				###PAGEBROWSER_LAST_PAGE###
-	 *			</ul>
-	 *		</div>
-	 *	<!-- ###PAGEBROWSER### END -->
 	 */
 	public function parseTemplate($template, &$formatter, $pbConfId, $pbMarker = 'PAGEBROWSER') {
 // Configs: maxPages, pagefloat
@@ -131,21 +101,10 @@ class tx_rnbase_util_PageBrowserMarker implements PageBrowserMarker {
 		if($templates['prev'] && $pointer > 0) {
 			$parts[] = $this->getPageString($pointer-1, $pointer, 'prev', $templates, $formatter, $pbConfId, $pbMarker);
 		}
-
-		// Der Marker "..." bei vielen Seiten
-		if($templates['prev_bullets'] && $pointer > $pageFloat-1 && $totalPages > $maxPages) {
-			$parts[] = $this->getPageString($pointer-1, $pointer, 'prev_bullets', $templates, $formatter, $pbConfId, $pbMarker);
-		}
-
 		// Jetzt über alle Seiten iterieren
 		for($i=$firstLastArr['first']; $i < $firstLastArr['last']; $i++) {
 			$pageId = ($i == $pointer && $templates['current']) ? 'current' : 'normal';
 			$parts[] = $this->getPageString($i, $pointer, $pageId, $templates, $formatter, $pbConfId, $pbMarker);
-		}
-
-		// Der Marker "..." bei vielen Seiten
-		if($templates['next_bullets'] && $pointer+$pageFloat < $totalPages-1 && $totalPages > $maxPages) {
-			$parts[] = $this->getPageString($pointer-1, $pointer, 'next_bullets', $templates, $formatter, $pbConfId, $pbMarker);
 		}
 
 		// Der Marker für die nächste Seite
@@ -263,9 +222,41 @@ class tx_rnbase_util_PageBrowserMarker implements PageBrowserMarker {
 		$this->link->initByTS($configuration, $pbConfId.'link.', array());
 		$this->token = md5(microtime());
 		$this->link->label($this->token);
+//		$this->link->destination($GLOBALS['TSFE']->id); // Link auf aktuelle Seite
 		$this->noLink = array('', '');
 	}
 }
+
+/*
+###PAGEBROWSER###
+<div>
+###PAGEBROWSER_NORMAL_PAGE###
+###PAGEBROWSER_NORMAL_PAGE_LINK### ###PAGEBROWSER_NORMAL_PAGE_NUMBER### ###PAGEBROWSER_NORMAL_PAGE_LINK###
+###PAGEBROWSER_NORMAL_PAGE###
+
+###PAGEBROWSER_CURRENT_PAGE###
+###PAGEBROWSER_CURRENT_PAGE_NUMBER###
+###PAGEBROWSER_CURRENT_PAGE###
+
+###PAGEBROWSER_FIRST_PAGE###
+###PAGEBROWSER_FIRST_PAGE_LINK### |< ###PAGEBROWSER_FIRST_PAGE_LINK###
+###PAGEBROWSER_FIRST_PAGE###
+
+###PAGEBROWSER_LAST_PAGE###
+###PAGEBROWSER_LAST_PAGE_LINK### >| ###PAGEBROWSER_LAST_PAGE_LINK###
+###PAGEBROWSER_LAST_PAGE###
+
+###PAGEBROWSER_PREV_PAGE###
+&nbsp;###PAGEBROWSER_PREV_PAGE_LINK###>###PAGEBROWSER_PREV_PAGE_LINK###&nbsp;
+###PAGEBROWSER_PREV_PAGE###
+
+###PAGEBROWSER_NEXT_PAGE###
+&nbsp;###PAGEBROWSER_NEXT_PAGE_LINK###>###PAGEBROWSER_NEXT_PAGE_LINK###&nbsp;
+###PAGEBROWSER_NEXT_PAGE###
+</div>
+###PAGEBROWSER###
+*/
+
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_PageBrowserMarker.php']) {
   include_once($TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_PageBrowserMarker.php']);

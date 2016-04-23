@@ -24,7 +24,7 @@
 
 tx_rnbase::load('tx_rnbase_util_Misc');
 tx_rnbase::load('tx_rnbase_util_TYPO3');
-tx_rnbase::load('tx_rnbase_util_Network');
+
 
 /**
  * Contains utility functions for HTML-Templates
@@ -45,14 +45,13 @@ class tx_rnbase_util_Templates {
 	 * @return string
 	 */
 	public static function getSubpart($template, $subpart) {
-		$parser = tx_rnbase_util_Typo3Classes::getHtmlParserClass();
-		$content = $parser::getSubpart($template, $subpart);
+		$content = t3lib_parsehtml::getSubpart($template, $subpart);
 		// check for Subtemplates
 		return self::includeSubTemplates($content);
 	}
 
 	/**
-	 * @return TYPO3\CMS\Core\TypoScript\TemplateService
+	 * @return t3lib_TStemplate
 	 */
 	public static function getTSTemplate() {
 		if(!is_object(self::$tmpl)) {
@@ -60,9 +59,7 @@ class tx_rnbase_util_Templates {
 				self::$tmpl = $GLOBALS['TSFE']->tmpl;
 			}
 			else {
-				self::$tmpl = tx_rnbase::makeInstance(
-					tx_rnbase_util_Typo3Classes::getTemplateServiceClass()
-				);
+				self::$tmpl = t3lib_div::makeInstance('t3lib_TStemplate');
 				self::$tmpl->init();
 				self::$tmpl->tt_track= 0;
 			}
@@ -77,12 +74,13 @@ class tx_rnbase_util_Templates {
 	 * @throws Exception if file or subpart not found
 	 */
 	public static function getSubpartFromFile($fileName, $subpart) {
-		$file = self::getTSTemplate()->getFileName($fileName);
+		$tmpl = self::getTSTemplate();
+		$file = $tmpl->getFileName($fileName);
 
 		if(TYPO3_MODE == 'BE' && strpos($file, PATH_site) === FALSE)
 			$file = PATH_site.$file; // Im BE auf absoluten Pfad setzen
 
-		$templateCode = tx_rnbase_util_Network::getURL($file);
+		$templateCode = t3lib_div::getURL($file);
 		if(!$templateCode) throw new Exception('File not found: '. htmlspecialchars($fileName));
 		$template = self::getSubpart($templateCode, $subpart);
 		if(!$template) throw new Exception('Subpart not found! File: '. htmlspecialchars($file) . ' Subpart: ' . htmlspecialchars($subpart));
@@ -146,7 +144,7 @@ class tx_rnbase_util_Templates {
 	 */
 	public static function cbIncludeSubTemplates($match)
 	{
-		list($filePath, $subPart) = tx_rnbase_util_Strings::trimExplode('@', $match[1]);
+		list($filePath, $subPart) = t3lib_div::trimExplode('@', $match[1]);
 		try {
 			$fileContent = self::getSubpartFromFile(
 				$filePath,
@@ -373,11 +371,14 @@ class tx_rnbase_util_Templates {
 					// Storing the cached data:
 					tx_rnbase_util_TYPO3::getSysPage()->storeHash($storeKey, serialize($storeArr), 'substMarkArrayCached');
 				}
+
+//				$GLOBALS['TT']->setTSlogMessage('Parsing', 0);
 			} else {
 					// Unserializing
 				$storeArr = unserialize($storeArrDat);
 					// Setting cache:
 				self::$substMarkerCache[$storeKey] = $storeArr;
+//				$GLOBALS['TT']->setTSlogMessage('Cached from DB', 0);
 			}
 		}
 
@@ -418,8 +419,7 @@ class tx_rnbase_util_Templates {
 	 * @see getSubpart(), t3lib_parsehtml::substituteSubpart()
 	 */
 	public static function substituteSubpart($content, $marker, $subpartContent, $recursive=1)	{
-		$htmlParser = tx_rnbase_util_Typo3Classes::getHtmlParserClass();
-		return $htmlParser::substituteSubpart($content, $marker, $subpartContent, $recursive);
+		return t3lib_parsehtml::substituteSubpart($content, $marker, $subpartContent, $recursive);
 	}
 }
 

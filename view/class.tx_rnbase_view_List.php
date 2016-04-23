@@ -28,6 +28,7 @@
 /**
  * benötigte Klassen einbinden
  */
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_view_Base');
 
 /**
@@ -37,9 +38,6 @@ tx_rnbase::load('tx_rnbase_view_Base');
  * @author René Nitzsche
  */
 class tx_rnbase_view_List extends tx_rnbase_view_Base {
-	const VIEWDATA_ITEMS = 'items';
-	const VIEWDATA_FILTER = 'filter';
-	const VIEWDATA_MARKER = 'marker';
 
   /**
    * Do the output rendering.
@@ -57,33 +55,20 @@ class tx_rnbase_view_List extends tx_rnbase_view_Base {
    */
 	public function createOutput($template, &$viewData, &$configurations, &$formatter) {
 		//View-Daten abholen
-		$items = $viewData->offsetGet(self::VIEWDATA_ITEMS);
-		$filter = $viewData->offsetGet(self::VIEWDATA_FILTER);
-		$markerData = $viewData->offsetGet(self::VIEWDATA_MARKER);
+		$items =& $viewData->offsetGet('items');
 		$confId = $this->getController()->getConfId();
 
-		$markerArray = $formatter->getItemMarkerArrayWrapped($markerData, $confId.'markers.');
-		$subpartArray = array();
-
 		$itemPath = $this->getItemPath($configurations, $confId);
-		if($filter && $filter->hideResult()) {
-			$subpartArray['###'.strtoupper($itemPath).'S###'] = '';
-			$items = array();
-			$template = $filter->getMarker()->parseTemplate($template, $formatter,
-					$confId.$itemPath.'.filter.', strtoupper($itemPath));
-		}
-		else {
-			$markerClass = $this->getMarkerClass($configurations, $confId);
+		$markerClass = $this->getMarkerClass($configurations, $confId);
 
-			//Liste generieren
-			$listBuilder = tx_rnbase::makeInstance('tx_rnbase_util_ListBuilder');
-			$template = $listBuilder->render($items, $viewData, $template, $markerClass,
-					$confId.$itemPath.'.', strtoupper($itemPath), $formatter
-			);
-		}
-		$template = tx_rnbase_util_Templates::substituteMarkerArrayCached($template, $markerArray, $subpartArray); //, $wrappedSubpartArray);
+		//Liste generieren
+		$listBuilder = tx_rnbase::makeInstance('tx_rnbase_util_ListBuilder');
+		$out = $listBuilder->render($items, $viewData, $template, $markerClass,
+			$confId.$itemPath.'.', strtoupper($itemPath), $formatter
+		);
 
-		return $template;
+
+		return $out;
 	}
 	protected function getItemPath($configurations, $confId) {
 		$itemPath = $configurations->get($confId.'template.itempath');

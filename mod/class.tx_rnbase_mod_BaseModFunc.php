@@ -22,7 +22,7 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Network');
+
 tx_rnbase::load('tx_rnbase_mod_IModule');
 tx_rnbase::load('tx_rnbase_mod_IModFunc');
 tx_rnbase::load('tx_rnbase_util_BaseMarker');
@@ -32,8 +32,6 @@ tx_rnbase::load('tx_rnbase_util_Templates');
 /**
  */
 abstract class tx_rnbase_mod_BaseModFunc implements tx_rnbase_mod_IModFunc {
-	/* @var $mod tx_rnbase_mod_IModule */
-	protected $mod;
 	public function init(tx_rnbase_mod_IModule $module, $conf) {
 		$this->mod = $module;
 	}
@@ -49,8 +47,8 @@ abstract class tx_rnbase_mod_BaseModFunc implements tx_rnbase_mod_IModFunc {
 		$out = '';
 		$conf = $this->getModule()->getConfigurations();
 
-		$file = tx_rnbase_util_Files::getFileAbsFileName($conf->get($this->getConfId().'template'));
-		$templateCode = tx_rnbase_util_Network::getURL($file);
+		$file = t3lib_div::getFileAbsFileName($conf->get($this->getConfId().'template'));
+		$templateCode = t3lib_div::getURL($file);
 		if(!$templateCode) return $conf->getLL('msg_template_not_found').'<br />File: \'' . $file . '\'<br />ConfId: \'' . $this->getConfId().'template\'';
 		$subpart = '###'.strtoupper($this->getFuncId()).'###';
 		$template = tx_rnbase_util_Templates::getSubpart($templateCode, $subpart);

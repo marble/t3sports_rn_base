@@ -26,8 +26,8 @@
 /**
  * benötigte Klassen einbinden
  */
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_SearchBase');
-tx_rnbase::load('Tx_Rnbase_Service_Base');
 
 /**
  * Base service class
@@ -37,7 +37,7 @@ tx_rnbase::load('Tx_Rnbase_Service_Base');
  * @subpackage tx_rnbase_sv1
  * @author René Nitzsche, Lars Heber, Michael Wagner
  */
-abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
+abstract class tx_rnbase_sv1_Base extends t3lib_svbase {
 
 	// 0: Hide record; 1: Soft-delete (via "deleted" field) record; 2: Really DELETE
 	const DELETION_MODE_HIDE = 0;
@@ -56,7 +56,7 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	 *
 	 * @param array $fields
 	 * @param array $options
-	 * @return array[Tx_Rnbase_Domain_Model_RecordInterface]
+	 * @return array[tx_rnbase_model_base]
 	 */
 	public function search($fields, $options) {
 		$searcher = tx_rnbase_util_SearchBase::getInstance($this->getSearchClass());
@@ -67,7 +67,7 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	 * Search the item for the given uid
 	 *
 	 * @param int $ct
-	 * @return Tx_Rnbase_Domain_Model_RecordInterface
+	 * @return tx_rnbase_model_base
 	 */
 	public function get($uid) {
 		$searcher = tx_rnbase_util_SearchBase::getInstance($this->getSearchClass());
@@ -77,7 +77,7 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	/**
 	 * Find all records
 	 *
-	 * @return array[Tx_Rnbase_Domain_Model_RecordInterface]
+	 * @return array[tx_rnbase_model_base]
 	 */
 	public function findAll(){
 		return $this->search(array(), array());
@@ -92,7 +92,7 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	/**
 	 * Dummy model instance
 	 *
-	 * @var Tx_Rnbase_Domain_Model_RecordInterface
+	 * @var tx_rnbase_model_base
 	 */
 	private $dummyModel;
 
@@ -102,7 +102,7 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	 * This is used only to access several model info methods like
 	 * getTableName(), getColumnNames() etc.
 	 *
-	 * @return Tx_Rnbase_Domain_Model_RecordInterface
+	 * @return tx_rnbase_model_base
 	 */
 	private function getDummyModel() {
 		if (!$this->dummyModel) {
@@ -123,6 +123,9 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 		$model = $this->getDummyModel();
 		$table = $model->getTableName();
 
+//		tx_rnbase::load('tx_mklib_util_TCA');
+//		$data = tx_mklib_util_TCA::eleminateNonTcaColumns($model, $data);
+
 		tx_rnbase::load('tx_rnbase_util_DB');
 		$newUid = tx_rnbase_util_DB::doInsert(
 			$table,
@@ -139,12 +142,12 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	 * and just call THIS method via parent::handleUpdate().
 	 * Additionally, the deriving implementation may perform further checks etc.
 	 *
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $model This model is being updated.
-	 * @param array $data New data
-	 * @param string $where Override default restriction by defining an explicite where clause
-	 * @return Tx_Rnbase_Domain_Model_RecordInterface Updated model
+	 * @param tx_rnbase_model_base	$model			This model is being updated.
+	 * @param array					$data			New data
+	 * @param string				$where			Override default restriction by defining an explicite where clause
+	 * @return tx_rnbase_model_base Updated model
 	 */
-	public function handleUpdate(Tx_Rnbase_Domain_Model_RecordInterface $model, array $data, $where='') {
+	public function handleUpdate(tx_rnbase_model_base $model, array $data, $where='') {
 
 		$table = $model->getTableName();
 		$uid = intval($model->getUid());
@@ -155,6 +158,10 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 		// remove uid if exists
 		if(array_key_exists('uid', $data))
 			unset($data['uid']);
+
+		// Eleminate columns not in TCA
+//		tx_rnbase::load('tx_mklib_util_TCA');
+//		$data = tx_mklib_util_TCA::eleminateNonTcaColumns($model, $data);
 
 		tx_rnbase::load('tx_rnbase_util_DB');
 		tx_rnbase_util_DB::doUpdate($table, $where, self::insertTimestamp($data, $table));
@@ -184,6 +191,7 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 
 				//else
 				$data = array($GLOBALS['TCA'][$table]['ctrl']['enablecolumns']['disabled'] => 1);
+//				self::doUpdate($table, $where, $data);
 				tx_rnbase_util_DB::doUpdate($table, $where, self::insertTimestamp($data, $table));
 				break;
 
@@ -216,13 +224,13 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	 * and just call THIS method via parent::handleDelete().
 	 * Additionally, the deriving implementation may perform further checks etc.
 	 *
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $model This model is being updated.
-	 * @param string $where Override default restriction by defining an explicite where clause
-	 * @param int $mode Deletion mode with the following options: 0: Hide record; 1: Soft-delete (via "deleted" field) record; 2: Really DELETE record.
-	 * @param int $table Wenn eine Tabelle angegeben wird, wird die des Models missachtet (wichtig für temp anzeigen)
-	 * @return Tx_Rnbase_Domain_Model_RecordInterface Updated (on success actually empty) model.
+	 * @param tx_rnbase_model_base	$model		This model is being updated.
+	 * @param string				$where		Override default restriction by defining an explicite where clause
+	 * @param int					$mode		Deletion mode with the following options: 0: Hide record; 1: Soft-delete (via "deleted" field) record; 2: Really DELETE record.
+	 * @param int					$table		Wenn eine Tabelle angegeben wird, wird die des Models missachtet (wichtig für temp anzeigen)
+	 * @return tx_rnbase_model_base				Updated (on success actually empty) model.
 	 */
-	public function handleDelete(Tx_Rnbase_Domain_Model_RecordInterface $model, $where='', $mode=0, $table=NULL) {
+	public function handleDelete(tx_rnbase_model_base $model, $where='', $mode=0, $table=NULL) {
 		if(empty($table)) {
 			$table = $model->getTableName();
 		}
@@ -270,7 +278,7 @@ abstract class tx_rnbase_sv1_Base extends Tx_Rnbase_Service_Base {
 	 * @param 	string 	$tablename
 	 * @return 	array
 	 */
-	protected static function insertCrdateAndTimestamp($data, $tablename) {
+	private static function insertCrdateAndTimestamp($data, $tablename) {
 		global $GLOBALS;
 		// Force creation of timestamp
 		if (

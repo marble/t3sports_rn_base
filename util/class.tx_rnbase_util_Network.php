@@ -21,7 +21,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
-
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_TYPO3');
 
 /**
@@ -43,60 +43,12 @@ class tx_rnbase_util_Network {
 	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::cmpIP()
 	 */
 	public static function cmpIP($baseIP, $list) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::cmpIP($baseIP, $list);
-	}
-
-	/**
-	 * @see t3lib_div::getUrl()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::getUrl()
-	 *
-	 * @param string $url File/URL to read
-	 * @param integer $includeHeader Whether the HTTP header should be fetched or not. 0=disable, 1=fetch header+content, 2=fetch header only
-	 * @param array $requestHeaders HTTP headers to be used in the request
-	 * @param array $report Error code/message and, if $includeHeader is 1, response meta data (HTTP status and content type)
-	 * @return mixed The content from the resource given as input. FALSE if an error has occurred.
-	 */
-	static public function getUrl($url, $includeHeader = 0, $requestHeaders = FALSE, &$report = NULL) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::getUrl($url, $includeHeader, $requestHeaders, $report);
-	}
-
-	/**
-	 * @see t3lib_div::isValidUrl()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::isValidUrl()
-	 *
-	 * @param string $url The URL to be validated
-	 * @return boolean Whether the given URL is valid
-	 */
-	static public function isValidUrl($url) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::isValidUrl($url);
-	}
-
-	/**
-	 * @see t3lib_div::locationHeaderUrl()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::locationHeaderUrl()
-	 *
-	 * @param string $path URL / path to prepend full URL addressing to.
-	 * @return string
-	 */
-	public static function locationHeaderUrl($path) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::locationHeaderUrl($path);
-	}
-
-	/**
-	 * @param string $remoteAddress
-	 * @param string $devIPmask
-	 * @return boolean
-	 */
-	public static function isDevelopmentIp($remoteAddress = '', $devIPmask = ''){
-		$devIPmask = trim(strcmp($devIPmask, '') ?
-			$devIPmask : $GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask']);
-		$remoteAddress = trim(strcmp($remoteAddress, '') ?
-			$remoteAddress : tx_rnbase_util_Misc::getIndpEnv('REMOTE_ADDR'));
-		return self::cmpIP($remoteAddress, $devIPmask);
+		if (tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
+			return TYPO3\CMS\Core\Utility\GeneralUtility::cmpIP($baseIP, $list);
+		}
+		else {
+			return t3lib_div::cmpIP($baseIP, $list);
+		}
 	}
 }
 

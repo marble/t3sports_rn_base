@@ -1,8 +1,9 @@
 <?php
+
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2013-2016 Rene Nitzsche
+ *  (c) 2013 Rene Nitzsche
  *  Contact: rene@system25.de
  *  All rights reserved
  *
@@ -24,12 +25,11 @@
 
 define('DEFAULT_LOCAL_FIELD', '_LOCALIZED_UID');
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
+
 tx_rnbase::load('tx_rnbase_util_TYPO3');
 if(!tx_rnbase_util_TYPO3::isTYPO60OrHigher())
 	return;
-
-tx_rnbase::load('Tx_Rnbase_Backend_Utility');
-tx_rnbase::load('tx_rnbase_util_Strings');
 
 /**
  * Contains utility functions for FAL
@@ -98,12 +98,16 @@ class tx_rnbase_util_TSFAL {
 		if(!$parentUid) return '<!-- Invalid data record given -->';
 
 		$medias = self::fetchFilesByTS($conf, $conf->getCObj());
+//if(!empty($medias)) {
+//tx_rnbase::load('tx_rnbase_util_Debug');
+//tx_rnbase_util_Debug::debug($conf->get('limit'), 'class.tx_rnbase_util_TSFAL.php Line: ' . __LINE__); // TODO: remove me
+//}
 		$listBuilder = tx_rnbase::makeInstance('tx_rnbase_util_ListBuilder');
 		$out = $listBuilder->render($medias, FALSE, $templateCode, 'tx_rnbase_util_MediaMarker',
 						'media.', 'MEDIA', $conf->getFormatter());
 
 		// Now set the identifier
-		$markerArray = array('###MEDIA_PARENTUID###' => $parentUid);
+		$markerArray['###MEDIA_PARENTUID###'] = $parentUid;
 		$out = tx_rnbase_util_BaseMarker::substituteMarkerArrayCached($out, $markerArray);
 		return $out;
 	}
@@ -132,30 +136,27 @@ class tx_rnbase_util_TSFAL {
 	 * no difference...
 	 *
 	 * @param tx_rnbase_configurations $conf
-	 * @param $cObj
-	 * @param string $confId
 	 * @return array
 	 */
-	public static function fetchFilesByTS($conf, $cObj, $confId='') {
-		/* @var $fileRepository \TYPO3\CMS\Core\Resource\FileRepository */
+	public static function fetchFilesByTS($conf, $cObj) {
+		/** @var \TYPO3\CMS\Core\Resource\FileRepository $fileRepository */
 		$fileRepository = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Core\\Resource\\FileRepository');
 		$fileObjects = array();
 		$pics = array();
 		tx_rnbase::load('tx_rnbase_util_Strings');
 		// Getting the files
 		// Try DAM style
-		if($conf->get($confId.'refTable')) {
+		if($conf->get('refTable')) {
 			$referencesForeignTable = $conf->getCObj()->stdWrap($conf->get($confId.'refTable'), $conf->get($confId.'refTable.'));
 			$referencesFieldName = $conf->getCObj()->stdWrap($conf->get($confId.'refField'), $conf->get($confId.'refField.'));
 			$referencesForeignUid = $conf->getCObj()->stdWrap($conf->get($confId.'refUid'), $conf->get($confId.'refUid.'));
-			if (!$referencesForeignUid) {
-				$referencesForeignUid = isset($cObj->data['_LOCALIZED_UID']) ?
-										$cObj->data['_LOCALIZED_UID'] : $cObj->data['uid'];
-			}
+			$referencesForeignUid = $referencesForeignUid ?
+					$referencesForeignUid :
+					isset($cObj->data['_LOCALIZED_UID']) ? $cObj->data['_LOCALIZED_UID'] : $cObj->data['uid'];
 			$pics = $fileRepository->findByRelation($referencesForeignTable, $referencesFieldName, $referencesForeignUid);
 		}
-		elseif (is_array($conf->get($confId.'references.'))) {
-			$refConfId = $confId.'references.';
+		elseif (is_array($conf->get('references.'))) {
+			$confId = 'references.';
 			/*
 			The TypoScript could look like this:# all items related to the page.media field:
 			references {
@@ -166,51 +167,44 @@ class tx_rnbase_util_TSFAL {
 			references = 27
 			 */
 
+//			$key = 'references';
+//			$referencesUid = $cObj->stdWrap($conf[$key], $conf[$key . '.']);
+//			$referencesUidArray = tx_rnbase_util_Strings::intExplode(',', $referencesUid, TRUE);
+//			foreach ($referencesUidArray as $referenceUid) {
+//				try {
+//					$this->addToArray($fileRepository->findFileReferenceByUid($referenceUid), $fileObjects);
+//				} catch (\TYPO3\CMS\Core\Resource\Exception $e) {
+//					/** @var \TYPO3\CMS\Core\Log\Logger $logger */
+//					$logger = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\CMS\Core\Log\LogManager')->getLogger();
+//					$logger->warning('The file-reference with uid  "' . $referenceUid . '" could not be found and won\'t be included in frontend output');
+//				}
+//			}
 
 			// It's important that this always stays "fieldName" and not be renamed to "field" as it would otherwise collide with the stdWrap key of that name
-			$referencesFieldName = $conf->getCObj()->stdWrap($conf->get($refConfId.'fieldName'), $conf->get($refConfId.'fieldName.'));
+			$referencesFieldName = $conf->getCObj()->stdWrap($conf->get($confId.'fieldName'), $conf->get($confId.'fieldName.'));
 			if ($referencesFieldName) {
 				$table = $cObj->getCurrentTable();
 				if ($table === 'pages' && isset($cObj->data['_LOCALIZED_UID']) && intval($cObj->data['sys_language_uid']) > 0) {
 					$table = 'pages_language_overlay';
 				}
-				$referencesForeignTable = $conf->getCObj()->stdWrap($conf->get($refConfId.'table'), $conf->get($refConfId.'table.'));
+				$referencesForeignTable = $conf->getCObj()->stdWrap($conf->get($confId.'table'), $conf->get($confId.'table.'));
 				$referencesForeignTable = $referencesForeignTable ? $referencesForeignTable : $table;
 
-				$referencesForeignUid = $conf->getCObj()->stdWrap($conf->get($refConfId.'uid'), $conf->get($refConfId.'uid.'));
+				$referencesForeignUid = $conf->getCObj()->stdWrap($conf->get($confId.'uid'), $conf->get($confId.'uid.'));
 				$referencesForeignUid = $referencesForeignUid ?
 						$referencesForeignUid :
-						(isset($cObj->data['_LOCALIZED_UID']) ? $cObj->data['_LOCALIZED_UID'] : $cObj->data['uid']);
+						isset($cObj->data['_LOCALIZED_UID']) ? $cObj->data['_LOCALIZED_UID'] : $cObj->data['uid'];
 				// Vermutlich kann hier auch nur ein Objekt geliefert werden...
-				$pics = array();
-				$referencesForeignUid = tx_rnbase_util_Strings::intExplode(',', $referencesForeignUid);
-				foreach ($referencesForeignUid As $refForUid) {
-					if (!$conf->get($refConfId.'treatIdAsReference'))
-						$pics[] = $fileRepository->findFileReferenceByUid($refForUid);
-					else
-						$pics[] = $fileRepository->findByRelation($referencesForeignTable, $referencesFieldName, $refForUid);
-				}
-			}
-			elseif ($refUids = $conf->getCObj()->stdWrap($conf->get($refConfId.'uid'), $conf->get($refConfId.'uid.')) ) {
-				if(!empty($refUids)) {
-					$refUids = tx_rnbase_util_Strings::intExplode(',', $refUids);
-					foreach ($refUids As $refUid) {
-						$pics[] = $fileRepository->findFileReferenceByUid($refUid);
-					}
-				}
+				$pics = $fileRepository->findByRelation($referencesForeignTable, $referencesFieldName, $referencesForeignUid);
 			}
 		}
-		// TODO: Hook
-		tx_rnbase_util_Misc::callHook('rn_base', 'util_TSFal_fetchFilesByTS_appendMedia_hook',
-			array('conf' => $conf, '$confId' => $confId, 'media'=> &$pics), null);
-
 		// gibt es ein Limit/offset
-		$offset = intval($conf->get($confId.'offset'));
-		$limit = intval($conf->get($confId.'limit'));
+		$offset = intval($conf->get('offset'));
+		$limit = intval($conf->get('limit'));
 		if(!empty($pics) && $limit) {
 			$pics = array_slice($pics, $offset, $limit);
 		}
-		elseif(!empty($pics) && $offset) {
+		elseif(!empty($pics) && $limit) {
 			$pics = array_slice($pics, $offset);
 		}
 		// Die Bilder sollten jetzt noch in ein
@@ -273,7 +267,7 @@ class tx_rnbase_util_TSFAL {
 		$refField = trim($cObj->stdWrap($conf['refField'], $conf['refField.']));
 
 		if (isset($GLOBALS['BE_USER']->workspace) && $GLOBALS['BE_USER']->workspace !== 0) {
-			$workspaceRecord = Tx_Rnbase_Backend_Utility::getWorkspaceVersionOfRecord(
+			$workspaceRecord = t3lib_BEfunc::getWorkspaceVersionOfRecord(
 				$GLOBALS['BE_USER']->workspace,
 				'tt_content',
 				$uid,
@@ -285,6 +279,9 @@ class tx_rnbase_util_TSFAL {
 			}
 		}
 		$fileRepository = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Core\\Resource\\FileRepository');
+//		if ($table === 'pages' && isset($row['_LOCALIZED_UID']) && intval($row['sys_language_uid']) > 0) {
+//			$table = 'pages_language_overlay';
+//		}
 		$files = $fileRepository->findByRelation($refTable, $refField, $uid);
 
 		if(!empty($files)) {
@@ -331,11 +328,11 @@ class tx_rnbase_util_TSFAL {
 		$ret = array();
 		foreach($references As $fileRef ) {
 			/* @var $fileRef \TYPO3\CMS\Core\Resource\FileReference */
-			if(!is_object($fileRef)) continue;
 			$thumbnail = FALSE;
 			/* @var $fileObject \TYPO3\CMS\Core\Resource\File */
 			$fileObject = $fileRef->getOriginalFile();
 			if ($fileObject) {
+//				$imageSetup = $config['appearance']['headerThumbnail'];
 				$imageSetup = array();
 				unset($imageSetup['field']);
 				$sizeArr = $sizeArr ? $sizeArr : array('width' => 64, 'height' => 64);
@@ -487,7 +484,7 @@ class tx_rnbase_util_TSFAL {
 		$where  = 'tablenames = ' . tx_rnbase_util_DB::fullQuoteStr($tableName, 'sys_file_reference');
 		$where .= ' AND fieldname = ' . tx_rnbase_util_DB::fullQuoteStr($fieldName, 'sys_file_reference');
 		$where .= ' AND uid_foreign = ' . (int) $itemId;
-		$uids = is_array($uids) ? $uids : tx_rnbase_util_Strings::intExplode(',', $uids);
+		$uids = is_array($uids) ? $uids : t3lib_div::intExplode(',', $uids);
 		if(!empty($uids)) {
 			$uids = implode(',', $uids);
 			$where .= ' AND uid IN (' . $uids .') ';
@@ -522,7 +519,7 @@ class tx_rnbase_util_TSFAL {
 		$where .= ' AND fieldname = ' . tx_rnbase_util_DB::fullQuoteStr($fieldName, 'sys_file_reference');
 		$where .= ' AND uid_foreign = ' . (int) $itemId;
 		if(strlen(trim($uids))) {
-			$uids = implode(',', tx_rnbase_util_Strings::intExplode(',', $uids));
+			$uids = implode(',', t3lib_div::intExplode(',', $uids));
 			$where .= ' AND uid_local IN (' . $uids .') ';
 		}
 		tx_rnbase_util_DB::doDelete('sys_file_reference', $where);
@@ -586,7 +583,7 @@ class tx_rnbase_util_TSFAL {
 		$info = $reference->getProperties();
 		// add some fileinfo
 		$info['file_path_name'] = $reference->getOriginalFile()->getPublicUrl();
-		$info['file_abs_url'] = tx_rnbase_util_Misc::getIndpEnv('TYPO3_SITE_URL') . $info['file_path_name'];
+		$info['file_abs_url'] = t3lib_div::getIndpEnv('TYPO3_SITE_URL') . $info['file_path_name'];
 		$info['file_name'] = $info['name'];
 		return $info;
 	}

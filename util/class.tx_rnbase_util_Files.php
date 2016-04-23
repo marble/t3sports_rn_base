@@ -22,8 +22,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase_configurations.php');
 tx_rnbase::load('tx_rnbase_util_TYPO3');
-tx_rnbase::load('tx_rnbase_util_Strings');
 
 /**
  * Contains some helpful methods for file handling
@@ -51,13 +51,12 @@ class tx_rnbase_util_Files {
 				$incFile = is_object($fileObject) ? $fileObject->getForLocalProcessing(FALSE) : FALSE;
 		}
 		else
-			$incFile = self::getFileName($fName);
+			$incFile = $GLOBALS['TSFE']->tmpl->getFileName($fName);
 		if ($incFile)	{
 			// Im BE muss ein absoluter Pfad verwendet werden
 			$fullPath = (TYPO3_MODE == 'BE') ? PATH_site.$incFile : $incFile;
-			$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-			$fileinfo = $utility::split_fileref($incFile);
-			if ($utility::inList('jpg,gif,jpeg,png', $fileinfo['fileext']))	{
+			$fileinfo = t3lib_div::split_fileref($incFile);
+			if (t3lib_div::inList('jpg,gif,jpeg,png', $fileinfo['fileext']))	{
 				$imgFile = $incFile;
 				$imgInfo = @getImageSize($imgFile);
 				$addParams= isset($options['addparams']) ? $options['addparams'] : 'alt="" title=""';
@@ -66,8 +65,7 @@ class tx_rnbase_util_Files {
 				$ret = @file_get_contents($fullPath);
 				$subpart = isset($options['subpart']) ? $options['subpart'] : '';
 				if($subpart) {
-					tx_rnbase::load('tx_rnbase_util_Templates');
-					$ret = tx_rnbase_util_Templates::getSubpart($ret, $subpart);
+					$ret = t3lib_parsehtml::getSubpart($ret, $subpart);
 				}
 			}
 		}
@@ -75,24 +73,11 @@ class tx_rnbase_util_Files {
 	}
 
 	/**
-	 * Returns the reference to a 'resource' in TypoScript.
-	 * This could be from the filesystem if '/' is found in the value $fileFromSetup, else from the resource-list
-	 *
-	 * @param string $file TypoScript "resource" data type value.
-	 *
-	 * @return string Resulting filename, if any.
-	 */
-	public static function getFileName($file) {
-		tx_rnbase::load('tx_rnbase_util_Templates');
-		return tx_rnbase_util_Templates::getTSTemplate()->getFileName($file);
-	}
-
-	/**
 	 * @return boolean TRUE if fName starts with file:
 	 */
 	public static function isFALReference($fName) {
 		return tx_rnbase_util_TYPO3::isTYPO60OrHigher() ?
-				tx_rnbase_util_Strings::isFirstPartOfStr($fName, 'file:')
+				\TYPO3\CMS\Core\Utility\GeneralUtility::isFirstPartOfStr($fName, 'file:')
 			: FALSE;
 	}
 	/**
@@ -103,8 +88,7 @@ class tx_rnbase_util_Files {
 	 * @return string the border attribute
 	 */
 	private static function getBorderAttr($borderAttr) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		if (!$utility::inList('xhtml_strict,xhtml_11,xhtml_2', $GLOBALS['TSFE']->xhtmlDoctype) && !$GLOBALS['TSFE']->config['config']['disableImgBorderAttr']) {
+		if (!t3lib_div::inList('xhtml_strict,xhtml_11,xhtml_2', $GLOBALS['TSFE']->xhtmlDoctype) && !$GLOBALS['TSFE']->config['config']['disableImgBorderAttr']) {
 			return $borderAttr;
 		}
 	}
@@ -117,7 +101,7 @@ class tx_rnbase_util_Files {
 	 */
 	public static function checkFile($fName)	{
 		$absFile = self::getFileAbsFileName($fName);
-		if(!(self::isAllowedAbsPath($absFile) && @is_file($absFile))) {
+		if(!(t3lib_div::isAllowedAbsPath($absFile) && @is_file($absFile))) {
 			throw new Exception('File not found: ' . $fName);
 		}
 		if(!@is_readable($absFile)) {
@@ -140,8 +124,9 @@ class tx_rnbase_util_Files {
 	 * @return string Returns the absolute filename of $filename if valid, otherwise blank string.
 	 */
 	public static function getFileAbsFileName($fName, $onlyRelative = TRUE, $relToTYPO3_mainDir = FALSE)	{
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::getFileAbsFileName($fName, $onlyRelative, $relToTYPO3_mainDir);
+		if(tx_rnbase_util_TYPO3::isTYPO60OrHigher())
+			return \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName($fName, $onlyRelative, $relToTYPO3_mainDir);
+		return t3lib_div::getFileAbsFileName($fName, $onlyRelative, $relToTYPO3_mainDir);
 	}
 	/**
 	 * Append file on directory
@@ -218,6 +203,7 @@ class tx_rnbase_util_Files {
 		//add the files
 		foreach($valid_files as $file) {
 			$filename = basename($file);
+			//$zip->addFile($file, $filename);
 			$zip->addFile($file, iconv('UTF-8', 'IBM850', $filename));
 		}
 
@@ -233,66 +219,16 @@ class tx_rnbase_util_Files {
 	 *
 	 * (non-PHPdoc)
 	 * @see t3lib_div::mkdir_deep()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::mkdir_deep()
+	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::cmpIP()
 	 */
 	static public function mkdir_deep($directory, $deepDirectory = '') {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::mkdir_deep($directory, $deepDirectory);
-	}
-
-	/**
-	 * (non-PHPdoc)
-	 * @see t3lib_div::writeFile()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::writeFile()
-	 *
-	 * @param string $file Filepath to write to
-	 * @param string $content Content to write
-	 * @param boolean $changePermissions If TRUE, permissions are forced to be set
-	 * @return boolean TRUE if the file was successfully opened and written to.
-	 */
-	static public function writeFile($file, $content, $changePermissions = FALSE) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::writeFile($file, $content, $changePermission);
-	}
-
-	/**
-	 * (non-PHPdoc)
-	 * @see t3lib_div::writeFile()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::writeFile()
-	 *
-	 * @param string $path Absolute path to folder, see PHP rmdir() function. Removes trailing slash internally.
-	 * @param boolean $removeNonEmpty Allow deletion of non-empty directories
-	 * @return boolean TRUE if @rmdir went well!
-	 */
-	static public function rmdir($path, $removeNonEmpty = FALSE) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::rmdir($path, $removeNonEmpty);
-	}
-
-	 /**
-	 * (non-PHPdoc)
-	 * @see t3lib_div::isAbsPath()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::isAbsPath()
-	 *
-	 * @param string $path File path to evaluate
-	 * @return bool
-	 */
-	public static function isAbsPath($path) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::isAbsPath($path);
-	}
-
- 	/**
-	 * (non-PHPdoc)
-	 * @see t3lib_div::isAllowedAbsPath()
-	 * @see TYPO3\CMS\Core\Utility\GeneralUtility::isAllowedAbsPath()
-	 *
-	 * @param string $path File path to evaluate
-	 * @return bool
-	 */
-	public static function isAllowedAbsPath($path) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::isAllowedAbsPath($path);
+		if (tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
+			return TYPO3\CMS\Core\Utility\GeneralUtility::mkdir_deep(
+				$directory, $deepDirectory
+			);
+		} else {
+			return t3lib_div::mkdir_deep($directory, $deepDirectory);
+		}
 	}
 }
 

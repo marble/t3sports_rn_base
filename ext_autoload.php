@@ -7,7 +7,4 @@ $extensionPath = (intval($versionParts[0]) >= 6) ?
 
 return array(
 		'tx_rnbase' => $extensionPath . 'class.tx_rnbase.php',
-		// class mapping for backwards compatibility to moved classes
-		'tx_rnbase_repository_abstractrepository' => $extensionPath . 'Classes/Domain/Repository/AbstractRepository.php',
-		'tx_rnbase_util_tcatool' => $extensionPath . 'Classes/Utility/TcaTool.php',
 );

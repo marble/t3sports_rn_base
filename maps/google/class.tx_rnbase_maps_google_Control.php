@@ -29,14 +29,14 @@ tx_rnbase::load('tx_rnbase_maps_IControl');
  */
 class tx_rnbase_maps_google_Control implements tx_rnbase_maps_IControl {
 
-	public function __construct($type) {
+	function tx_rnbase_maps_google_Control($type) {
 		$this->type = $type;
 	}
 	/**
 	 * Returns an ID-String for the map provider.
 	 * @return string
 	 */
-	public function render() {
+	function render() {
 		// Für die wec_map ist nur die ID notwendig
 		return $this->type;
 	}

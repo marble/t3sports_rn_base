@@ -20,6 +20,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_action_BaseIOC');
 tx_rnbase::load('tx_rnbase_util_BaseMarker');
 tx_rnbase::load('tx_rnbase_util_Templates');
@@ -132,7 +133,7 @@ class tx_rnbase_view_Base{
 		// build the data to render
 		$pluginData = array_merge(
 			// use the current data (tt_conten) to render
-			(array) $configurations->getCObj()->data,
+			$configurations->getCObj()->data,
 			// add some aditional columns, for example from the flexform od typoscript directly
 			$configurations->getExploded(
 				$confId . 'plugin.flexdata.'
@@ -193,7 +194,7 @@ class tx_rnbase_view_Base{
 	 * Set the path of the template directory
 	 *
 	 * You can make use the syntax EXT:myextension/somepath.
-	 * It will be evaluated to the absolute path by tx_rnbase_util_Files::getFileAbsFileName()
+	 * It will be evaluated to the absolute path by t3lib_div::getFileAbsFileName()
 	 *
 	 * @param string path to the directory containing the php templates
 	 * @return void
@@ -244,7 +245,7 @@ class tx_rnbase_view_Base{
 	 */
 	function getTemplate($templateName, $extension = '.php', $forceAbsPath = 0) {
 		if (strlen($this->_pathToFile) > 0) {
-			return ($forceAbsPath) ? tx_rnbase_util_Files::getFileAbsFileName($this->_pathToFile) : $this->_pathToFile;
+			return ($forceAbsPath) ? t3lib_div::getFileAbsFileName($this->_pathToFile) : $this->_pathToFile;
 		}
 		$path = $this->pathToTemplates;
 		$path .= substr($path, -1, 1) == '/' ? $templateName : '/' . $templateName;

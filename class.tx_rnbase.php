@@ -3,7 +3,7 @@
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2009-2015 Rene Nitzsche
+ *  (c) 2009 Rene Nitzsche
  *  Contact: rene@system25.de
  *
  * This library is free software; you can redistribute it and/or
@@ -50,8 +50,9 @@ class tx_rnbase {
 			self::$loadedClasses[$classNameOrPathInformation] = TRUE;
 			return TRUE;
 		}
-		if(tx_rnbase_util_Extensions::isLoaded('lib')) {
-			require_once(tx_rnbase_util_Extensions::extPath('lib') . 'class.tx_lib_pearLoader.php');
+		if(t3lib_extMgm::isLoaded('lib')) {
+//			print '<p>Trying Pear Loader: ' . $classNameOrPathInformation;
+			require_once(t3lib_extMgm::extPath('lib') . 'class.tx_lib_pearLoader.php');
 			if(tx_lib_pearLoader::load($classNameOrPathInformation)) {
 				self::$loadedClasses[$classNameOrPathInformation] = TRUE;
 				return TRUE;
@@ -75,22 +76,35 @@ class tx_rnbase {
 	 *
 	 * @param	string		classname
 	 * @param	mixed optional more parameters for constructor
-	 * @return	object|Exception	instance of the class or FALSE if it fails
+	 * @return	object		instance of the class or FALSE if it fails
 	 * @see		t3lib_div::makeInstance
 	 * @see		load()
 	 */
 	public static function makeInstance($class) {
 		$ret = FALSE;
 		if(self::load($class)) {
-			self::load('tx_rnbase_util_Typo3Classes');
-			$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
 			if(func_num_args() > 1) {
 				// Das ist ein Konstruktor Aufruf mit Parametern
 				$args = func_get_args();
-				$ret = call_user_func_array(array($utility, 'makeInstance'), $args);
-			} else {
-				$ret = $utility::makeInstance($class);
+				self::load('tx_rnbase_util_TYPO3');
+				if(tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
+					// Die Parameter weiterreichen
+					$ret = call_user_func_array(array('TYPO3\CMS\Core\Utility\GeneralUtility', 'makeInstance'), $args);
+				}
+				elseif(tx_rnbase_util_TYPO3::isTYPO43OrHigher()) {
+					// Die Parameter weiterreichen
+					$ret = call_user_func_array(array('t3lib_div', 'makeInstance'), $args);
+				}
+				else {
+					array_shift($args);
+					// Bei 4.2 den alten Weg verwenden
+					$className = t3lib_div::makeInstanceClassName($class);
+					$reflectionObj = new ReflectionClass($className);
+					$ret = $reflectionObj->newInstanceArgs($args);
+				}
 			}
+			else
+				$ret = t3lib_div::makeInstance($class);
 		}
 		return $ret;
 	}
@@ -105,8 +119,14 @@ class tx_rnbase {
 	 * @return object The service object or an array with error info's.
 	 */
 	public static function makeInstanceService($serviceType, $serviceSubType = '', $excludeServiceKeys = array()) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::makeInstanceService($serviceType, $serviceSubType, $excludeServiceKeys);
+		self::load('tx_rnbase_util_TYPO3');
+		if(tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
+			$module = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstanceService($serviceType, $serviceSubType, $excludeServiceKeys);
+		}
+		else {
+			$module = t3lib_div::makeInstanceService($serviceType, $serviceSubType, $excludeServiceKeys);
+		}
+		return $module;
 	}
 
 	/**
@@ -128,8 +148,8 @@ class tx_rnbase {
 		if(!$outputName) {
 			$outputName = self::makeInstanceClassNameT3($inputName);
 		}
-		if(!$outputName && tx_rnbase_util_Extensions::isLoaded('lib')) {
-			require_once(tx_rnbase_util_Extensions::extPath('lib') . 'class.tx_lib_pearLoader.php');
+		if(!$outputName && t3lib_extMgm::isLoaded('lib')) {
+			require_once(t3lib_extMgm::extPath('lib') . 'class.tx_lib_pearLoader.php');
 			$outputName = tx_lib_pearLoader::makeInstanceClassName($inputName);
 		}
 		return $outputName;
@@ -159,22 +179,32 @@ class tx_rnbase {
 	 * @return	boolean		TRUE if class was loaded
 	 */
 	private static function loadT3($minimalInformation, $alternativeKey='', $prefix = 'class.', $suffix = '.php') {
-		// Class still exists
-		if (class_exists($minimalInformation)) {
-			return TRUE;
-		}
-
+		if(class_exists($minimalInformation)) return TRUE; // Class still exists
 		$path = self::_findT3($minimalInformation, $alternativeKey, $prefix, $suffix);
 
-		if ($path) {
-			if (class_exists('\TYPO3\CMS\Core\Utility\GeneralUtility')) {
-				\TYPO3\CMS\Core\Utility\GeneralUtility::requireOnce($path);
-			} else {
-				t3lib_div::requireOnce($path);
-			}
+		if($path) {
+			t3lib_div::requireOnce($path);
+			return TRUE;
 		}
+		return FALSE;
+	}
 
-		return class_exists($minimalInformation);
+	/**
+	 * Load a t3 class and make an instance
+	 *
+	 * Returns ux_ extension class if any by make use of t3lib_div::makeInstance
+	 *
+	 * @param	string		classname
+	 * @param	string		extension key that varies from classnames
+	 * @param	string		prefix of classname
+	 * @param	string		ending of classname
+	 * @return	object		instance of the class or FALSE if it fails
+	 * @see		t3lib_div::makeInstance
+	 * @see		load()
+	 */
+	private static function makeInstanceT3($class, $alternativeKey='', $prefix = 'class.', $suffix = '.php') {
+		return (self::loadT3($class, $alternativeKey, $prefix, $suffix)) ?
+			t3lib_div::makeInstance($class) : FALSE;
 	}
 
 	/**
@@ -191,9 +221,8 @@ class tx_rnbase {
 	 * @see		load()
 	 */
 	private static function makeInstanceClassNameT3($class, $alternativeKey='', $prefix = 'class.', $suffix = '.php') {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
 		return (self::loadT3($class, $alternativeKey, $prefix, $suffix)) ?
-			$utility::makeInstanceClassName($class) : FALSE;
+			t3lib_div::makeInstance($class) : FALSE;
 	}
 	/**
 	 * Returns an array with information about a class
@@ -261,10 +290,7 @@ class tx_rnbase {
 		$ret['class'] = $class;
 		$ret['dir'] = $dir;
 		$ret['extkey'] = $key;
-		if(class_exists('\TYPO3\CMS\Core\Utility\ExtensionManagementUtility'))
-			$ret['extpath'] = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::extPath($key);
-		else
-			$ret['extpath'] = t3lib_extMgm::extPath($key);
+		$ret['extpath'] = t3lib_extMgm::extPath($key);
 		if($isExtBase) {
 			$path = $ret['extpath'] . $dir . $last . $suffix;
 		}

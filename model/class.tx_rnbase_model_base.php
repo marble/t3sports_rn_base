@@ -22,11 +22,32 @@
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_model_data');
-tx_rnbase::load('Tx_Rnbase_Domain_Model_RecordInterface');
 tx_rnbase::load('tx_rnbase_util_TCA');
 // Die Datenbank-Klasse
 tx_rnbase::load('tx_rnbase_util_DB');
+
+
+/**
+ * This interface defines a base model
+ */
+interface tx_rnbase_IModel {
+	/**
+	 * Returns the uid
+	 *
+	 * @return int
+	 */
+	public function getUid();
+
+	/**
+	 * Returns the data record as array
+	 *
+	 * @return array
+	 */
+	public function getRecord();
+
+}
 
 
 /**
@@ -34,15 +55,8 @@ tx_rnbase::load('tx_rnbase_util_DB');
  * mit einer UID als auch mit einem Datensatz aufgerufen werden kann. Die Daten werden
  * in den Instanzvariablen $uid und $record abgelegt. Diese beiden Variablen sind also immer
  * verfügbar. Der Umfang von $record kann aber je nach Aufruf unterschiedlich sein!
- *
- * @deprecated: IS NO LONGER BEING DEVELOPED!!!
- *              please use Tx_Rnbase_Domain_Model_Base
- *              THIS CLASS WILL BE DROPPED IN THE FUTURE!!!
  */
-class tx_rnbase_model_base
-	extends tx_rnbase_model_data
-		implements Tx_Rnbase_Domain_Model_RecordInterface
-{
+class tx_rnbase_model_base extends tx_rnbase_model_data implements tx_rnbase_IModel {
 
 	var $uid;
 
@@ -210,10 +224,6 @@ class tx_rnbase_model_base
 			$this->getTableName(),
 			$this->getUid()
 		);
-
-		// set the modified state to clean
-		$this->resetCleanState();
-
 		return $this;
 	}
 	/**

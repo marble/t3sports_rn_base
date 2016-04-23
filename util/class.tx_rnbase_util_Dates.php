@@ -21,7 +21,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Strings');
 
 /**
  * Simple Utility methods for date conversion.
@@ -102,21 +101,16 @@ class tx_rnbase_util_Dates {
 		return $useGMT ? gmdate('Y-m-d', $tstamp) : date('Y-m-d', $tstamp);
 	}
 	/**
-	 * Umwandlung eines Datums yyyy-mm-dd in einen Timestamp.
-	 * Es wird NULL geliefert wenn kein Timstamp berechnet werden
-	 * kann.
+	 * Umwandlung eines Datums yyyy-mm-dd in einen Timestamp
 	 *
 	 * @param string $date Format: yyyy-mm-dd
-	 * @return int or NULL if no timestamp could be calculated
+	 * @return int
 	 */
 	static function date_mysql2tstamp($date) {
-		list($jahr, $monat, $tag) = tx_rnbase_util_Strings::intExplode('-', $date);
+		list($jahr, $monat, $tag) = t3lib_div::intExplode('-', $date);
 		// If mktime() is fed with 6x 0, it returns tstamp for 1999/11//30 00:00:00 which indeed is correct!
-		if (!$jahr && !$monat && !$jahr) {
-			$tstamp = FALSE;
-		} else {
-			$tstamp = mktime(0, 0, 0, $monat, $tag, $jahr);
-		}
+		if (!$jahr && !$monat && !$jahr) return NULL;
+		$tstamp = mktime(0, 0, 0, $monat, $tag, $jahr);
 		// If mktime arguments are invalid, the function returns FALSE  (before PHP 5.1 it returned -1).
 		return (!in_array($tstamp, array(FALSE, -1))) ? $tstamp : NULL;
 	}
@@ -139,8 +133,8 @@ class tx_rnbase_util_Dates {
 	 */
 	static function datetime_mysql2tstamp($datetime, $timezone = 'CET') {
 		list($datum, $zeit) = explode(' ', $datetime);
-		list($jahr, $monat, $tag) = tx_rnbase_util_Strings::intExplode('-', $datum);
-		list($std, $min, $sec) = $zeit ? tx_rnbase_util_Strings::intExplode(':', $zeit) : array(0, 0, 0);
+		list($jahr, $monat, $tag) = t3lib_div::intExplode('-', $datum);
+		list($std, $min, $sec) = $zeit ? t3lib_div::intExplode(':', $zeit) : array(0, 0, 0);
 		return self::getTimeStamp($jahr, $monat, $tag, $std, $min, $sec, $timezone);
 	}
 	/**

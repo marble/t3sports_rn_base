@@ -73,13 +73,12 @@ class tx_rnbase_util_FormUtil {
 
 		if (strpos($url, '?') !== FALSE) {
 			$params = substr($url, strpos($url, '?') + 1);
-			$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-			$params = $utility::explodeUrl2Array($params);
+			$params = t3lib_div::explodeUrl2Array($params);
 			$url = substr($url, 0, strpos($url, '?'));
 		}
 		foreach ($params as $name => $value) {
-			$name = tx_rnbase_util_Strings::removeXSS($name);
-			$value = tx_rnbase_util_Strings::removeXSS($value);
+			$name = t3lib_div::removeXSS($name);
+			$value = t3lib_div::removeXSS($value);
 			$sysHidden .= '<input type="hidden" name="'.$name.'" value="'.$value.'" />';
 		}
 		return $sysHidden;

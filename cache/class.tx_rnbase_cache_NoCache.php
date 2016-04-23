@@ -3,7 +3,7 @@
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2009 Rene Nitzsche
+ *  (c) 2010 Rene Nitzsche
  *  Contact: rene@system25.de
  *  All rights reserved
  *
@@ -24,17 +24,34 @@
 
 require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
-tx_rnbase::load('tx_rnbase_util_BaseMarker');
+tx_rnbase::load('tx_rnbase_cache_ICache');
 
-class tx_rnbase_filter_FilterItemMarker extends tx_rnbase_util_BaseMarker {
-	public function parseTemplate($template, &$item, &$formatter, $confId, $marker = 'FILTERITEM') {
-    $markerArray = $formatter->getItemMarkerArrayWrapped($item->record, $confId , 0, $marker.'_');
+/**
+ * This is a dummy cache. It will not hold any data.
+ */
+class tx_rnbase_cache_NoCache implements tx_rnbase_cache_ICache {
+	public function __construct($cacheName) {
+	}
+	/**
+	 * Retrieve a value from cache
+	 *
+	 * @param string $key
+	 * @return NULL
+	 */
+	public function get($key) {
+		return NULL;
+	}
+	public function has($key) {
+		return FALSE;
+	}
+	public function set($key, $value, $lifetime = NULL) {
 
-		$out = $formatter->cObj->substituteMarkerArrayCached($template, $markerArray, $subpartArray, $wrappedSubpartArray);
-		return $out;
+	}
+	public function remove($key) {
+
 	}
 }
 
-if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/filter/class.tx_rnbase_filter_FilterItemMarker.php']) {
-	include_once($TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/filter/class.tx_rnbase_filter_FilterItemMarker.php']);
+if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/cache/class.tx_rnbase_cache_NoCache.php']) {
+	include_once($TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/cache/class.tx_rnbase_cache_NoCache.php']);
 }

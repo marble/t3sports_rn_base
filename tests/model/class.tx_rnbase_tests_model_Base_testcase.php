@@ -22,10 +22,10 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
-tx_rnbase::load('tx_rnbase_tests_BaseTestCase');
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_model_base');
 
-class tx_rnbase_tests_model_Base_testcase extends tx_rnbase_tests_BaseTestCase {
+class tx_rnbase_tests_model_Base_testcase extends tx_phpunit_testcase {
 
 	public function test_magiccall() {
 		$model = new tx_rnbase_model_base(array('uid'=>1, 'test_value'=>45));

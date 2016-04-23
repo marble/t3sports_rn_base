@@ -81,6 +81,9 @@ class tx_rnbase_util_db_MsSQL implements tx_rnbase_util_db_IDatabase {
 			return $data;
 		}
 
+// 		$unpacked = unpack('H*hex', $data);
+// 		return '0x' . $unpacked['hex'];
+
 		$nonDdisplayables = array(
 				'/%0[0-8bcef]/',            // url encoded 00-08, 11, 12, 14, 15
 				'/%1[0-9a-f]/',             // url encoded 16-31
@@ -188,6 +191,7 @@ class tx_rnbase_util_db_MsSQL implements tx_rnbase_util_db_IDatabase {
 
 			return $query;
 		}
+// 		return $GLOBALS['TYPO3_DB']->INSERTquery($table, $fields_values, $no_quote_fields);
 	}
 	/**
 	 * Creates and executes an INSERT SQL-statement for $table from the array with field/value pairs $fields_values.
@@ -248,6 +252,7 @@ class tx_rnbase_util_db_MsSQL implements tx_rnbase_util_db_IDatabase {
 				1270853880
 			);
 		}
+// 		return $GLOBALS['TYPO3_DB']->UPDATEquery($table, $where, $fields_values, $no_quote_fields);
 	}
 	/**
 	 * Creates and executes an UPDATE SQL-statement for $table where $where-clause (typ. 'uid=...') from the array with field/value pairs $fields_values.
@@ -364,7 +369,7 @@ class tx_rnbase_util_db_MsSQL implements tx_rnbase_util_db_IDatabase {
 
 		}
 
-		$setDBinit = tx_rnbase_util_Strings::trimExplode(LF,
+		$setDBinit = t3lib_div::trimExplode(LF,
 				str_replace("' . LF . '", LF, $credArr['setDBinit']), TRUE);
 		foreach ($setDBinit as $v) {
 			if (mssql_query($v, $link) === FALSE) {

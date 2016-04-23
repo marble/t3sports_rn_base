@@ -1,7 +1,7 @@
 <?php
 if (!defined ('TYPO3_MODE')) 	die ('Access denied.');
 
-tx_rnbase_util_Extensions::addService($_EXTKEY,  'mediaplayer' /* sv type */,  'tx_rnbase_sv1_MediaPlayer' /* sv key */,
+t3lib_extMgm::addService($_EXTKEY,  'mediaplayer' /* sv type */,  'tx_rnbase_sv1_MediaPlayer' /* sv key */,
   array(
 
 	'title' => 'Media Player',
@@ -16,7 +16,7 @@ tx_rnbase_util_Extensions::addService($_EXTKEY,  'mediaplayer' /* sv type */,  '
 	'os' => '',
 	'exec' => '',
 
-	'classFile' => tx_rnbase_util_Extensions::extPath($_EXTKEY).'sv1/class.tx_rnbase_sv1_MediaPlayer.php',
+	'classFile' => t3lib_extMgm::extPath($_EXTKEY).'sv1/class.tx_rnbase_sv1_MediaPlayer.php',
 	'className' => 'tx_rnbase_sv1_MediaPlayer',
 		)
 	);

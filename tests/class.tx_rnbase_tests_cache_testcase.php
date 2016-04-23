@@ -22,9 +22,11 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
+
 tx_rnbase::load('tx_rnbase_util_TYPO3');
 
-class tx_rnbase_tests_cache_testcase extends Tx_Phpunit_TestCase {
+class tx_rnbase_tests_cache_testcase extends tx_phpunit_testcase {
 
 	function test_CacheManager() {
 		tx_rnbase::load('tx_rnbase_cache_Manager');
@@ -34,6 +36,7 @@ class tx_rnbase_tests_cache_testcase extends Tx_Phpunit_TestCase {
 	}
 
 	function test_TYPO3Cache() {
+		if(!tx_rnbase_util_TYPO3::isTYPO43OrHigher()) return; // Geht erst ab 4.3
 		$cache = self::createTYPO3Cache('__rnbaseTestTYPO3Cache__');
 
 		$this->assertTrue(is_object($cache), 'Cache not instanciated');
@@ -43,6 +46,14 @@ class tx_rnbase_tests_cache_testcase extends Tx_Phpunit_TestCase {
 		$this->assertEquals($arr['id'], '100', 'Array content is wrong');
 	}
 
+	function test_NoCache() {
+		$cache = tx_rnbase::makeInstance('tx_rnbase_cache_NoCache', '__rnbaseTestNoCache__');
+		$this->assertTrue(is_object($cache), 'Cache not instanciated');
+		$cache->set('key1', array('id' => '100'));
+		$arr = $cache->get('key1');
+		$this->assertTrue($arr == NULL, 'Array is set');
+	}
+
 	/**
 	 * Returns the cache
 	 *
@@ -50,9 +61,7 @@ class tx_rnbase_tests_cache_testcase extends Tx_Phpunit_TestCase {
 	 * @return tx_rnbase_cache_ICache
 	 */
 	private static function createTYPO3Cache($name) {
-		if(tx_rnbase_util_TYPO3::isTYPO62OrHigher()) {
-			$className = 'tx_rnbase_cache_TYPO3Cache62';
-		} elseif(tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
+		if(tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
 			$className = 'tx_rnbase_cache_TYPO3Cache60';
 		} elseif (tx_rnbase_util_TYPO3::isTYPO46OrHigher()) {
 			$className = 'tx_rnbase_cache_TYPO3Cache46';

@@ -22,6 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
 tx_rnbase::load('tx_rnbase_util_SearchBase');
 
@@ -203,15 +204,7 @@ class tx_rnbase_filter_BaseFilter implements tx_rnbase_IFilter, tx_rnbase_IFilte
 	}
 
 	/**
-	 * Pagebrowser vorbereiten. Wir im Plugin nach dem init() des Filters aufgerufen:
-	 *
-	 * 		// Soll ein PageBrowser verwendet werden
-	 *		tx_rnbase_filter_BaseFilter::handlePageBrowser($configurations,
-	 *			$this->getConfId().'myitem.pagebrowser', $viewdata, $fields, $options, array(
-	 *			'searchcallback'=> array($service, 'search'),
-	 *			'pbid' => 'mt'.$configurations->getPluginId(),
-	 *			)
-	 *		);
+	 * Pagebrowser vorbereiten
 	 *
 	 * @param tx_rnbase_configurations $configurations
 	 * @param string $confid Die Confid des PageBrowsers. z.B. myview.org.pagebrowser ohne Punkt!
@@ -379,7 +372,6 @@ class tx_rnbase_filter_BaseFilter implements tx_rnbase_IFilter, tx_rnbase_IFilte
 			$keys = array_keys($ret);
 			$current = $keys[0];
 		}
-		$data = array();
 		$data['list'] = $ret;
 		$data['default'] = $current;
 		$data['pointername'] = array_key_exists('cbid', $cfg) && $cfg['cbid'] ? $cfg['cbid'] : 'charpointer';

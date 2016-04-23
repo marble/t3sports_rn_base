@@ -81,18 +81,21 @@ class tx_rnbase_maps_google_Icon implements tx_rnbase_maps_IIcon {
 	 * @return string
 	 */
 	function render() {
+//$iconID, $imagepath, $shadowpath, $width, $height,
+//	 * $shadowWidth, $shadowHeight, $anchorX, $anchorY,
+//	 * $infoAnchorX, $infoAnchorY
 		$mapName = $this->map->getMapName();
 
 		$image = $this->getImage();
 		$size = $this->getSize() ? $this->getSize() : '20,20';
 		$shadow = $this->getShadow();
 		$shadowSize = $this->getShadowSize() ? $this->getShadowSize() : '20,20';
+		// typo3conf/ext/wec_map/images/mm_20_shadow.png - 22, 20
 
 		$ret = 'WecMap.addIcon("'.$mapName.'", "'.$this->getName().
 				'", "'.$image.'", "'.$shadow.
-				'", new google.maps.Size('.$size.'), new google.maps.Size('.$shadowSize.
-	//			'), new google.maps.Point(6, 20), new google.maps.Point(5,1));';
-				'), new google.maps.Point('.$this->getAnchorPoint().'), new google.maps.Point('.$this->getInfoWindowAnchorPoint().'));';
+				'", new GSize('.$size.'), new GSize('.$shadowSize.
+				'), new GPoint('.$this->getAnchorPoint().'), new GPoint('.$this->getInfoWindowAnchorPoint().'));';
 
 		// Für die wec_map ist nur die ID notwendig
 		return $ret;

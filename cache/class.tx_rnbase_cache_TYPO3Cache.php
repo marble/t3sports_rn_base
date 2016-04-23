@@ -22,6 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
 tx_rnbase::load('tx_rnbase_cache_ICache');
 
@@ -62,6 +63,7 @@ class tx_rnbase_cache_TYPO3Cache implements tx_rnbase_cache_ICache {
 			if(!array_key_exists('t3lib_cache_backend_TransientMemoryBackend', $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheBackends'])) {
 				$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheBackends']['t3lib_cache_backend_TransientMemoryBackend'] = 't3lib/cache/backend/class.t3lib_cache_backend_transientmemorybackend.php:t3lib_cache_backend_TransientMemoryBackend';
 			}
+//			$backendName =  't3lib_cache_backend_NullBackend';
 		}
 		else {
 			$backendName = $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][$cacheName]['backend'];
@@ -79,8 +81,8 @@ class tx_rnbase_cache_TYPO3Cache implements tx_rnbase_cache_ICache {
 		if(!$local && is_object($GLOBALS['typo3CacheFactory']))
 			return $GLOBALS['typo3CacheFactory']; // Globale Factory ist schon gesetzt
 
-		$manager = tx_rnbase::makeInstance('t3lib_cache_Manager');
-		$factory = tx_rnbase::makeInstance('t3lib_cache_Factory');
+		$manager = t3lib_div::makeInstance('t3lib_cache_Manager');
+		$factory = t3lib_div::makeInstance('t3lib_cache_Factory');
 		$factory->setCacheManager($manager);
 		if(!$local) {
 			$GLOBALS['typo3CacheFactory'] = $factory;

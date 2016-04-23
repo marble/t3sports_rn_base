@@ -22,6 +22,8 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
+
 tx_rnbase::load('tx_rnbase_view_List');
 
 
@@ -35,6 +37,7 @@ class tx_rnbase_view_Single extends tx_rnbase_view_List {
 	function createOutput($template, &$viewData, &$configurations, &$formatter){
 
 		$confId = $this->getController()->getConfId();
+		// $itemKey =
 		// Die ViewData bereitstellen
 		$item = $viewData->offsetGet('item');
 		$itemPath = $this->getItemPath($configurations, $confId);

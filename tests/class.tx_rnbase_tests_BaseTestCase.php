@@ -1,5 +1,4 @@
 <?php
-use TYPO3\CMS\Core\Tests\AccessibleObjectInterface;
 /***************************************************************
  *  Copyright notice
  *
@@ -22,7 +21,7 @@ use TYPO3\CMS\Core\Tests\AccessibleObjectInterface;
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Typo3Classes');
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
 
 /**
  * Basis Testcase
@@ -32,14 +31,14 @@ tx_rnbase::load('tx_rnbase_util_Typo3Classes');
  * @author Michael Wagner <michael.wagner@dmk-ebusiness.de>
  */
 abstract class tx_rnbase_tests_BaseTestCase
-	extends Tx_Phpunit_TestCase {
+	extends tx_phpunit_testcase {
 
 	/**
 	 * Sample:
-	 * self::createConfigurations(
+	 * $this->createConfigurations(
 	 *     array(), 'rn_base', 'rn_base',
 	 *     tx_rnbase::makeInstance('tx_rnbase_parameters'),
-	 *     tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getContentObjectRendererClass())
+	 *     tx_rnbase::makeInstance('tslib_cObj')
 	 * );
 	 *
 	 * @param array $configurationArray
@@ -47,7 +46,7 @@ abstract class tx_rnbase_tests_BaseTestCase
 	 * @param string $qualifier
 	 * @return tx_rnbase_configurations
 	 */
-	protected static function createConfigurations(
+	protected function createConfigurations(
 		array $configurationArray, $extensionKey, $qualifier = ''
 	) {
 		$qualifier = empty($qualifier) ? $extensionKey : $qualifier;
@@ -62,8 +61,7 @@ abstract class tx_rnbase_tests_BaseTestCase
 			if ($arg instanceof tx_rnbase_parameters) {
 				$parameters = $arg;
 			}
-			$contentObjectRendererClass = tx_rnbase_util_Typo3Classes::getContentObjectRendererClass();
-			if ($arg instanceof $contentObjectRendererClass) {
+			if ($arg instanceof tslib_cObj) {
 				$cObj = $arg;
 			}
 		}
@@ -99,7 +97,7 @@ abstract class tx_rnbase_tests_BaseTestCase
 		// if there is an scalar value,
 		// a db select fill be performed to get the record
 		if (!is_array($record)) {
-			$record = array('uid' => (int) $record);
+			$record = array('uid' => 0);
 		}
 
 		if (!tx_rnbase::load($class)) {
@@ -119,120 +117,16 @@ abstract class tx_rnbase_tests_BaseTestCase
 		);
 
 		$model
-			->expects(self::any())
+			->expects($this->any())
 			->method('reset')
-			->will(self::returnSelf())
+			->will($this->returnSelf())
 		;
 		$model
-			->expects(self::never())
+			->expects($this->never())
 			->method('getColumnWrapped')
 		;
 
 		return $model;
-	}
-
-	/**
-	 * Converts a YAML to a model mock
-	 *
-	 * YAML example:
-	 * _model: Tx_Rnbase_Domain_Model_Base
-	 * _record:
-	 *   uid: 3
-	 * getCategory:
-	 *   _model: Tx_Rnbase_Domain_Model_Data
-	 *   _record:
-	 *     uid: 5
-	 * getCategories:
-	 *   -
-	 *     _model: Tx_Rnbase_Domain_Model_Data
-	 *     _record:
-	 *       uid: 12
-	 *   -
-	 *     _model: Tx_Rnbase_Domain_Model_Data
-	 *     _record:
-	 *       uid: 13
-	 *
-	 * @param mixed $data Usually the yaml file
-	 *
-	 * @return tx_rnbase_model_base|PHPUnit_Framework_MockObject_MockObject
-	 */
-	protected function loadYaml($data)
-	{
-		// there is no array, so convert the yaml content or file
-		if (!is_array($data)) {
-			tx_rnbase::load('tx_rnbase_util_Spyc');
-			$data = tx_rnbase_util_Spyc::YAMLLoad($data);
-		}
-
-		// we have an model
-		if (isset($data['_model'])) {
-			// find all getter methods to mock.
-			$getters = $this->yamlFindGetters($data);
-
-			$clazz = (empty($data['_model'])
-				? 'tx_rnbase_model_base'
-				: $data['_model']
-			);
-
-			tx_rnbase::load($clazz);
-			$model = $this->getModel(
-				(array) ($data['_record']),
-				$clazz,
-				$getters
-			);
-
-			// mock the getters and return the value from the nested yaml
-			foreach ($getters as $getter) {
-				($model
-					->expects(self::any())
-					->method($getter)
-					->will($this->returnValue($this->loadYaml($data[$getter])))
-				);
-			}
-
-			return $model;
-		}
-		elseif (is_array($data)) {
-			$array = array();
-			foreach ($data as $field => $value) {
-				if (is_array($value)) {
-					$value = $this->loadYaml($value);
-				}
-				$array[$field] = $value;
-			}
-
-			return $array;
-		}
-		// else: return the data only
-
-		return $data;
-	}
-
-	/**
-	 * Returns all getters.
-	 * Getters are fields beginning with "get" and a following uppercase char.
-	 *
-	 * @param array $array
-	 *
-	 * @return tx_rnbase_model_base|PHPUnit_Framework_MockObject_MockObject
-	 */
-	private function yamlFindGetters(
-		array $array
-	) {
-		$getters = array();
-
-		foreach (array_keys($array) as $field) {
-			if (
-				$field{0} === 'g' &&
-				$field{1} === 'e' &&
-				$field{2} === 't' &&
-				strtoupper($field{3}) === $field{3}
-			) {
-				$getters[] = $field;
-			}
-		}
-
-		return $getters;
 	}
 
 	/**
@@ -333,7 +227,8 @@ abstract class tx_rnbase_tests_BaseTestCase
 
 		$interfaces = '';
 		if (tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
-			$interfaces = 'Tx_Phpunit_Interface_AccessibleObject';
+			// @TODO: should we use Tx_Phpunit_Interface_AccessibleObject?
+			$interfaces = '\TYPO3\CMS\Core\Tests\AccessibleObjectInterface';
 		}
 		$interfaces = empty($interfaces) ? '' : ' implements ' . $interfaces;
 
@@ -433,18 +328,6 @@ abstract class tx_rnbase_tests_BaseTestCase
 		return $accessibleClassName;
 	}
 
-	/**
-	 * @return void
-	 */
-	protected function resetIndependentEnvironmentCache() {
-		if (tx_rnbase_util_TYPO3::isTYPO76OrHigher()) {
-			$property = new ReflectionProperty(
-				tx_rnbase_util_Typo3Classes::getGeneralUtilityClass(), 'indpEnvCache'
-			);
-			$property->setAccessible(TRUE);
-			$property->setValue(NULL, array());
-		}
-	}
 }
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['Tx_Mkkeywords_Tests_Unit_Php_BaseTestCase']) {

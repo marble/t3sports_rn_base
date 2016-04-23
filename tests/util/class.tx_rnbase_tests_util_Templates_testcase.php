@@ -21,7 +21,8 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Network');
+
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_tests_BaseTestCase');
 tx_rnbase::load('tx_rnbase_util_Templates');
 
@@ -104,12 +105,16 @@ class tx_rnbase_tests_util_Templates_testcase
 		$memEnd2 = memory_get_usage() - $memStart;
 		$results['Serie 2'] = array('Info'=> 'Timetrack off, Static MarkerArray', 'Time1'=>$time1, 'Time2'=> $time2,
 			'Mem1'=>$memEnd1, 'Mem2'=>$memEnd2);
+
+
+		t3lib_utility_Debug::debug($results, 'class.tx_rnbase_tests_util_Templates_testcase.php'); // TODO: remove me
+
 	}
 
 	public function test_includeSubTemplates() {
 
-		$fixture = tx_rnbase_util_Network::getURL(
-			tx_rnbase_util_Extensions::extPath(
+		$fixture = t3lib_div::getURL(
+			t3lib_extMgm::extPath(
 				'rn_base',
 				'tests/fixtures/html/includeSubTemplates.html'
 			)
@@ -144,20 +149,11 @@ class tx_rnbase_tests_util_Templates_testcase
 		$this->assertEquals($exp, $cnt);
 	}
 	private function setTTOn() {
-		if (tx_rnbase_util_TYPO3::isTYPO62OrHigher()) {
-			$GLOBALS['TT'] = new \TYPO3\CMS\Core\TimeTracker\TimeTracker;
-		} else {
-			$GLOBALS['TT'] = new t3lib_timeTrack;
-		}
-
+		$GLOBALS['TT'] = new t3lib_timeTrack;
 		$GLOBALS['TT']->start();
 	}
 	private function setTTOff() {
-		if (tx_rnbase_util_TYPO3::isTYPO62OrHigher()) {
-			$GLOBALS['TT'] = new \TYPO3\CMS\Core\TimeTracker\NullTimeTracker;
-		} else {
-			$GLOBALS['TT'] = new t3lib_timeTrackNull;
-		}
+		$GLOBALS['TT'] = new t3lib_timeTrackNull;
 		$GLOBALS['TT']->start();
 	}
 

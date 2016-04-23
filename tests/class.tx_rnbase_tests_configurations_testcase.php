@@ -21,16 +21,19 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Typo3Classes');
 
-class tx_rnbase_tests_configurations_testcase extends Tx_Phpunit_TestCase {
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
+
+
+
+class tx_rnbase_tests_configurations_testcase extends tx_phpunit_testcase {
   function test_tsSetup() {
   	$GLOBALS['TSFE'] = new tx_rnbase_tsfeDummy();
 		$GLOBALS['TSFE']->tmpl->setup['lib.']['match.'] = array('limit' => '10' , 'count' => '99');
 
 		$configurationArray['matchtable.']['match'] = '< lib.match';
   	$configurationArray['matchtable.']['match.']['limit'] = '100';
-    $cObj = tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getContentObjectRendererClass());
+    $cObj = t3lib_div::makeInstance('tslib_cObj');
     $configurations = tx_rnbase::makeInstance('tx_rnbase_configurations');
     $configurations->init($configurationArray, $cObj, 'extkey_text', 'rntest');
 
@@ -54,7 +57,7 @@ class tx_rnbase_tests_configurations_testcase extends Tx_Phpunit_TestCase {
 		$configurationArray['view.']['loginbox.']['message'] = 'Hello';
 		$configurationArray['listview.']['feuser'] = '< lib.feuser';
 
-    $cObj = tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getContentObjectRendererClass());
+    $cObj = t3lib_div::makeInstance('tslib_cObj');
     $cObj->data['pi_flexform'] = $flexXml;
 		$configurations = tx_rnbase::makeInstance('tx_rnbase_configurations');
     $configurations->init($configurationArray, $cObj, 'extkey_text', 'rntest');

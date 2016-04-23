@@ -22,11 +22,13 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
+
+
 tx_rnbase::load('tx_rnbase_util_Misc');
-tx_rnbase::load('tx_rnbase_util_Typo3Classes');
 
 
-class tx_rnbase_tests_listbuilder_testcase extends Tx_Phpunit_TestCase {
+class tx_rnbase_tests_listbuilder_testcase extends tx_phpunit_testcase {
 
 	function setup() {
 		unset($GLOBALS['TSFE']);
@@ -96,7 +98,7 @@ class tx_rnbase_tests_listbuilder_testcase extends Tx_Phpunit_TestCase {
 		return $models;
 	}
 	private function getConfig($confArr) {
-    $cObj = tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getContentObjectRendererClass());
+    $cObj = t3lib_div::makeInstance('tslib_cObj');
 		$configurations = tx_rnbase::makeInstance('tx_rnbase_configurations');
     $configurations->init($confArr, $cObj, 'tx_rnbase', 'rnbase');
 		return $configurations;

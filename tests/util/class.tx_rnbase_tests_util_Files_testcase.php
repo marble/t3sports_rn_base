@@ -21,6 +21,7 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_Files');
 
 /**
@@ -33,7 +34,7 @@ tx_rnbase::load('tx_rnbase_util_Files');
  * @license 		http://www.gnu.org/licenses/lgpl.html
  * 					GNU Lesser General Public License, version 3 or later
  */
-class tx_rnbase_tests_util_Files_testcase extends Tx_Phpunit_TestCase {
+class tx_rnbase_tests_util_Files_testcase extends tx_phpunit_testcase {
 
 	/**
 	 * @var array

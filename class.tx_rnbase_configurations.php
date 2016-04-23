@@ -73,9 +73,9 @@
  * @subpackage tx_rnbase
  *
  */
-tx_rnbase::load('tx_rnbase_util_Network');
-tx_rnbase::load('tx_rnbase_util_Typo3Classes');
-tx_rnbase::load('tx_rnbase_util_Arrays');
+
+
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
 class tx_rnbase_configurations {
   // We store all Data to an internal ArrayObject
@@ -194,8 +194,7 @@ class tx_rnbase_configurations {
 	 * @return boolean
 	 */
 	public function isPluginUserInt() {
-		$contentObjectRendererClass = tx_rnbase_util_Typo3Classes::getContentObjectRendererClass();
-		return $this->getCObj()->getUserObjectType() == $contentObjectRendererClass::OBJECTTYPE_USER_INT;
+		return $this->getCObj()->getUserObjectType() == tslib_cObj::OBJECTTYPE_USER_INT;
 	}
 	/**
 	 * Whether or not the plugins uses its own parameters. This will add the plugin id to all
@@ -229,13 +228,12 @@ class tx_rnbase_configurations {
    * If id == 0 the will get the plugins original cOBj.
    * @param $id any
    * @param $cObjClass String Optional cObj-classname
-   * @return \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer or tslib_cObj
+   * @return tslib_cObj
    */
-	public function &getCObj($id = 0, $cObjClass = NULL) {
-		$cObjClass = $cObjClass === NULL ? tx_rnbase_util_Typo3Classes::getContentObjectRendererClass() : $cObjClass;
+	public function &getCObj($id = 0, $cObjClass = 'tslib_cObj') {
 		if(strcmp($id, '0') == 0) {
 			if(!is_object($this->cObj)) {
-				$this->cObj = tx_rnbase::makeInstance($cObjClass);
+				$this->cObj = t3lib_div::makeInstance($cObjClass);
 				$this->cObjs[0] = $this->cObj;
 			}
 			return $this->cObj;
@@ -244,7 +242,8 @@ class tx_rnbase_configurations {
 		$cObj = $this->_cObjs[$id];
 
 		if(!is_object($cObj)) {
-			$this->cObjs[$id] = tx_rnbase::makeInstance($cObjClass);
+			$this->cObjs[$id] = t3lib_div::makeInstance($cObjClass);
+//    $this->cObj->data = $this->configurations->get('tt_content.');
 		}
 		return $this->cObjs[$id];
 	}
@@ -365,8 +364,8 @@ class tx_rnbase_configurations {
   function &getFlexFormArray() {
     static $flex;
     if (!is_array($flex)) {
-      $flex = tx_rnbase_util_Network::getURL(tx_rnbase_util_Extensions::extPath($this->getExtensionKey()) . $this->get('flexform'));
-      $flex = tx_rnbase_util_Arrays::xml2array($flex);
+      $flex = t3lib_div::getURL(t3lib_extMgm::extPath($this->getExtensionKey()) . $this->get('flexform'));
+      $flex = t3lib_div::xml2array($flex);
     }
     return $flex;
   }
@@ -424,6 +423,7 @@ class tx_rnbase_configurations {
 			$arr = $this->_queryArrayByPath($this->_dataStore->getArrayCopy(), $pathKey.'.');
 			if (is_array($arr)){
 				$ret = array('key' => $ret, 'key.' => $arr);
+//				$ret = array_merge(array($ret), $arr);
 			}
 		}
 		if (is_array($ret)) {
@@ -495,7 +495,7 @@ class tx_rnbase_configurations {
 		if (empty($value)) {
 			return array();
 		}
-		return tx_rnbase_util_Strings::trimExplode($delim, $value, TRUE);
+		return t3lib_div::trimExplode($delim, $value, TRUE);
 	}
 
 	/**
@@ -604,14 +604,19 @@ class tx_rnbase_configurations {
 	 * @param string $confId
 	 * @return array of strings or empty array
 	 */
-	public function getKeyNames($confId)
-	{
-		$dynaMarkers = $this->get($confId);
-		if (!is_array($dynaMarkers)) {
-			return array();
-		}
-
-		return $this->getUniqueKeysNames($dynaMarkers);
+	function getKeyNames($confId){
+    $markers = array();
+    $dynaMarkers = $this->get($confId);
+    if(!$dynaMarkers) return $markers;
+    $dynaMarkers = array_keys($dynaMarkers);
+    if(!$dynaMarkers || !count($dynaMarkers)) return $markers;
+    // Jetzt evt. vorhandene Punkt am Ende entfernen
+    for($i=0, $size = count($dynaMarkers); $i < $size; $i++) {
+      $markers[] = preg_replace('/\./', '', $dynaMarkers[$i]);
+    }
+    $markers = array_unique($markers);
+    $markers = array_values($markers);
+    return $markers;
 	}
 
 	/**
@@ -620,23 +625,17 @@ class tx_rnbase_configurations {
 	 * @param array $conf configuration array
 	 * @return array
 	 */
-	public function getUniqueKeysNames(array $conf)
-	{
-		$keys = array();
+	function getUniqueKeysNames($conf) {
+	  $keys = array();
+    $dynaMarkers = array_keys($conf);
+    if(!$dynaMarkers || !count($dynaMarkers)) return $keys;
 
-		$dynaMarkers = array_keys($conf);
-		if (empty($dynaMarkers)) {
-			return $keys;
-		}
-
-		// Jetzt evt. vorhandene Punkt am Ende entfernen
-		foreach ($dynaMarkers as $dynaMarker) {
-			$keys[] = preg_replace('/\./', '', $dynaMarker);
-		}
-
-		return array_values(array_unique($keys));
+    // Jetzt evt. vorhandene Punkt am Ende entfernen
+    for($i=0, $size = count($dynaMarkers); $i < $size; $i++) {
+      $keys[] = preg_replace('/\./', '', $dynaMarkers[$i]);
+    }
+    return array_unique($keys);
 	}
-
 	// -------------------------------------------------------------------------------------
 	// Private functions
 	// -------------------------------------------------------------------------------------
@@ -729,7 +728,7 @@ class tx_rnbase_configurations {
 		if (is_array($xmlOrArray)) {
 			$array = $xmlOrArray;
 		} else {
-			$array = tx_rnbase_util_Arrays::xml2array($xmlOrArray);
+			$array = t3lib_div::xml2array($xmlOrArray);
 		}
 		$data = $array['data'];
 		// Looking for the special sheet s_tssetup
@@ -760,7 +759,7 @@ class tx_rnbase_configurations {
 		}
 		if($flexTs) {
 			// This handles ts setup from flexform
-			$tsParser = tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getTypoScriptParserClass());
+			$tsParser = t3lib_div::makeInstance('t3lib_TSparser');
 			$tsParser->setup = $this->_dataStore->getArrayCopy();
 			$tsParser->parse($flexTs);
 			$flexTsData = $tsParser->setup;
@@ -776,7 +775,7 @@ class tx_rnbase_configurations {
 		// das < abschneiden, um den pfad zum link zu erhalten
 		$key = trim(substr($value, 1));
 
-		$tsParser = tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getTypoScriptParserClass());
+		$tsParser = t3lib_div::makeInstance('t3lib_TSparser');
 
 		// $name and $conf is loaded with the referenced values.
 		list($linkValue, $linkConf) = $tsParser->getVal($key, $GLOBALS['TSFE']->tmpl->setup);
@@ -858,21 +857,21 @@ class tx_rnbase_configurations {
 	/**
 	 * (Try to) Render Typoscript recursively
 	 *
-	 * \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::cObjGetSingle() renders a TS array
+	 * tslib_cObj::cObjGetSingle() renders a TS array
 	 * only if the passed array structure is directly
 	 * defined renderable Typoscript - it does however
 	 * not care for deep array structures.
 	 * This method heals this lack by traversing the
 	 * given TS array recursively and calling
-	 * \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::cObjGetSingle() on each sub-array
+	 * tslib_cObj::cObjGetSingle() on each sub-array
 	 * which looks like being renderable.
 	 *
 	 * @param array            $data    Deep data array parsed from Typoscript text
-	 * @param \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer or tslib_cObj $cObj
+	 * @param tslib_cObj    $cObj
 	 * @return array                Data array with Typoscript rendered
 	 * @author Lars Heber
 	 */
-	private function renderTS($data, $cObj) {
+	private function renderTS($data, tslib_cObj &$cObj) {
 		foreach ($data as $key=>$value) {
 			// Array key with trailing '.'?
 			if (substr($key, strlen($key)-1, 1) == '.') {

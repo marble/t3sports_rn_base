@@ -46,28 +46,12 @@ class tx_rnbase_util_TYPO3 {
 		return self::isTYPO3VersionOrHigher(6001000);
 	}
 	/**
-	 * Prüft, ob mindestens TYPO3 Version 6.2 vorhanden ist.
+	 * Prüft, ob mindestens TYPO3 Version 6.1 vorhanden ist.
 	 *
 	 * @return boolean
 	 */
 	public static function isTYPO62OrHigher() {
 		return self::isTYPO3VersionOrHigher(6002000);
-	}
-	/**
-	 * Prüft, ob mindestens TYPO3 Version 7.0 vorhanden ist.
-	 *
-	 * @return boolean
-	 */
-	public static function isTYPO70OrHigher() {
-		return self::isTYPO3VersionOrHigher(7000000);
-	}
-	/**
-	 * Prüft, ob mindestens TYPO3 Version 7.6 vorhanden ist.
-	 *
-	 * @return boolean
-	 */
-	public static function isTYPO76OrHigher() {
-		return self::isTYPO3VersionOrHigher(7006000);
 	}
 	/**
 	 * Prüft, ob mindestens TYPO3 Version 4.7 vorhanden ist.
@@ -157,7 +141,7 @@ class tx_rnbase_util_TYPO3 {
 		return array();
 	}
 	/**
-	 * Wrapper function for tx_rnbase_util_Extensions::isLoaded()
+	 * Wrapper function for t3lib_extMgm::isLoaded()
 	 * @param string $_EXTKEY
 	 */
 	public static function isExtLoaded($_EXTKEY) {
@@ -188,7 +172,7 @@ class tx_rnbase_util_TYPO3 {
 	/**
 	 * Get the current frontend user
 	 *
-	 * @return \TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication or tslib_feUserAuth current frontend user.
+	 * @return tslib_feUserAuth current frontend user.
 	 */
 	public static function getFEUser() {
 		return $GLOBALS['TSFE']->fe_user;
@@ -222,7 +206,7 @@ class tx_rnbase_util_TYPO3 {
 	/**
 	 * Returns TSFE.
 	 *
-	 * @return \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController or tslib_fe
+	 * @return tslib_fe
 	 */
 	public static function getTSFE() {
 		if(!is_object($GLOBALS['TSFE'])) {
@@ -233,17 +217,14 @@ class tx_rnbase_util_TYPO3 {
 	}
 	private static $sysPage = NULL;
 	/**
-	 * @return \TYPO3\CMS\Frontend\Page\PageRepository or t3lib_pageSelect
+	 * @return t3lib_pageSelect
 	 */
 	public static function getSysPage() {
 		if (!is_object(self::$sysPage)) {
 			if(is_object($GLOBALS['TSFE']->sys_page))
 				self::$sysPage = $GLOBALS['TSFE']->sys_page; // Use existing SysPage from TSFE
 			else {
-				self::$sysPage = tx_rnbase::makeInstance(
-					tx_rnbase_util_TYPO3::isTYPO60OrHigher() ?
-					'TYPO3\CMS\Frontend\Page\PageRepository' : 't3lib_pageSelect'
-				);
+				self::$sysPage = t3lib_div::makeInstance('t3lib_pageSelect');
 				self::$sysPage->init(0); // $this->showHiddenPage
 			}
 		}
@@ -254,10 +235,14 @@ class tx_rnbase_util_TYPO3 {
 	 * wrapper Methode mit Abhängigkeit von TYPO3 Version
 	 *
 	 * @return string
-	 * @deprecated use tx_rnbase_util_Typo3Classes::getHttpUtilityClass
 	 */
 	public static function getHttpUtilityClass() {
-		return tx_rnbase_util_Typo3Classes::getHttpUtilityClass();
+		if (self::isTYPO62OrHigher()) {
+			$httpUtilityClass = 'TYPO3\\CMS\\Core\\Utility\\HttpUtility';
+		} else {
+			$httpUtilityClass = 't3lib_utility_Http';
+		}
+		return $httpUtilityClass;
 	}
 }
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_TYPO3.php'])	{

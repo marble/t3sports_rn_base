@@ -1,11 +1,11 @@
 # MVC Plugins
 
-Die Extension rn_base stellt Klassen für die Entwicklung von TYPO3 Extensions bereit. Es werden dabei sehr viele Bereiche der Entwicklung abgedeckt, angefangen von der Plugin-Entwicklung nach MVC, über den Zugriff auf die Datenbank, die Verarbeitung von Typoscript, bis hin zur Entwicklung von BE-Modulen.
+Die Extension rn_base stellt Klassen für die Entwicklung von TYPO3 Extensions bereit. Es werden dabei sehr viele Bereiche der Entwicklung abgedeckt, angefangen von der Plugin-Entwicklung nach MVC, über den Zugriff auf die Datenbank, die Verarbeitung von Typoscript, bis hin zur Entwicklung von BE-Modulen. 
 
 ##Die Grundlagen
 
-In rn_base wird für die Pluginentwicklung nicht der herkömmliche Plugin-Ansatz auf Basis der
-Klasse **tslib_pibase** bzw. **\TYPO3\CMS\Frontend\Plugin\AbstractPlugin** verwendet. Stattdessen werden die Plugins nach dem Pattern Model-View-Controller umgesetzt. Die meisten Plugins in TYPO3 verfügen über verschiedene Darstellungen. Als Beispiel sei die bekannte Extension tt_news genannt. Diese liefert u.a. eine Newsliste, eine News-Detailansicht, ein Archiv, eine Suche und vieles andere mehr. Die Plugins auf Basis von rn_base haben bereits eine eingebaute Unterstützung für diese Darstellungen. Man muss im Flexform des Plugins lediglich den Namen der Klasse angeben und diese dann natürlich noch anlegen. Den Rest übernimmt der Basis-Controller in rn_base. Hier ein Auschnitt aus dem Flexform der Extension **t3sponsors**:
+In rn_base wird für die Pluginentwicklung nicht der herkömmliche Plugin-Ansatz auf Basis der 
+Klasse **tslib_pibase** verwendet. Stattdessen werden die Plugins nach dem Pattern Model-View-Controller umgesetzt. Die meisten Plugins in TYPO3 verfügen über verschiedene Darstellungen. Als Beispiel sei die bekannte Extension tt_news genannt. Diese liefert u.a. eine Newsliste, eine News-Detailansicht, ein Archiv, eine Suche und vieles andere mehr. Die Plugins auf Basis von rn_base haben bereits eine eingebaute Unterstützung für diese Darstellungen. Man muss im Flexform des Plugins lediglich den Namen der Klasse angeben und diese dann natürlich noch anlegen. Den Rest übernimmt der Basis-Controller in rn_base. Hier ein Auschnitt aus dem Flexform der Extension **t3sponsors**: 
 
 ```xml
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
@@ -49,7 +49,7 @@ Klasse **tslib_pibase** bzw. **\TYPO3\CMS\Frontend\Plugin\AbstractPlugin** verwe
 
 Hier sind zwei Klassen für die Darstellung konfiguriert: **tx_t3sponsors_actions_SponsorList** und **tx_t3sponsors_actions_SponsorShow**. Anhand des Namens kann der Basiscontroller die Klassen automatisch laden und den Request übergeben. Natürlich können beliebig viele Darstellungen gleichzeitig ausgewählt werden. Die Abarbeitung erfolgt dann in der gewählten Reihenfolge.
 
-Vorher muss allerdings das Plugin bzw. der Basiscontroller bei TYPO3 angemeldet werden. Dies geschieht zum einen in der ext_tables.php
+Vorher muss allerdings das Plugin bzw. der Basiscontroller bei TYPO3 angemeldet werden. Dies geschieht zum einen in der ext_tables.php 
 
 ```php
 $TCA['tt_content']['types']['list']['subtypes_excludelist']['tx_t3sponsors']='layout,select_key,pages';
@@ -60,7 +60,7 @@ tx_rnbase_util_Extensions::addPiFlexFormValue('tx_t3sponsors','FILE:EXT:'.$_EXTK
 tx_rnbase_util_Extensions::addPlugin(Array('LLL:EXT:'.$_EXTKEY.'/Resources/Private/Language/locallang_db.php:plugin.t3sponsors.label','tx_t3sponsors'));
 tx_rnbase_util_Extensions::addStaticFile($_EXTKEY,'Configuration/Typoscript/Base/', 'T3 Sponsors');
 ```
-In der letzten Zeile wird das Static-Template der Extension angemeldet. In dieser Datei setup.txt müssen wir weitere Angaben zum Plugin machen:
+In der letzten Zeile wird das Static-Template der Extension angemeldet. In dieser Datei setup.txt müssen wir weitere Angaben zum Plugin machen:  
 
 ```
 includeLibs.tx_rnbase_controller = EXT:rn_base/class.tx_rnbase_controller.php
@@ -73,7 +73,7 @@ plugin.tx_t3sponsors.templatePath   = EXT:t3sponsors/templates
 plugin.tx_t3sponsors.locallangFilename = EXT:t3sponsors/resources/Private/Language/locallang.xml
 tt_content.list.20.tx_t3sponsors    =< plugin.tx_t3sponsors
 ```
-Danach sollte das Plugin korrekt integriert sein und sich als Content-Element auswählen lassen.
+Danach sollte das Plugin korrekt integriert sein und sich als Content-Element auswählen lassen. 
 Nun benötigen wir natürlich noch den Action-Controller, der den eigentlichen Output des Plugins liefert. In rn_base werden verschiedene Basisklassen bereitgestellt. Am häufigsten wird die Actionklasse von tx_rnbase_action_BaseIOC erben und dann mininal folgendes Aussehen haben:
 ```php
 class tx_t3sponsors_actions_SponsorList extends tx_rnbase_action_BaseIOC {
@@ -97,7 +97,7 @@ class tx_t3sponsors_actions_SponsorList extends tx_rnbase_action_BaseIOC {
 		$cfg['searchcallback'] = array($service, 'search');
 		tx_rnbase_filter_BaseFilter::handleCharBrowser($configurations, $this->getConfId().'sponsor.charbrowser', $viewdata, $fields, $options, $cfg);
 		tx_rnbase_filter_BaseFilter::handlePageBrowser($configurations, $this->getConfId().'sponsor.pagebrowser', $viewdata, $fields, $options, $cfg);
-		$sponsors = $srv->search($fields, $options);
+  	$sponsors = $srv->search($fields, $options);
 		$viewdata->offsetSet('sponsors', $sponsors);
 		return null;
 	}
@@ -106,37 +106,34 @@ class tx_t3sponsors_actions_SponsorList extends tx_rnbase_action_BaseIOC {
 	function getViewClassName() { return 'tx_t3sponsors_views_SponsorList';}
 }
 ```
-Theoretisch kann die Methode **handleRequest()** direkt einen String zurückliefern. Dieser würde dann ohne weitere Verarbeitung im Frontend angezeigt. Im Beispiel oben wird statt dessen **NULL** zurückgegeben. Dadurch wird die Ausgabe über eine View-Klasse geleitet und man kann HTML-Template verwenden. Alle Daten, die für die Ausgabe benötigt werden, sollten in das Objekt $viewdata geschrieben werden.
+Theoretisch kann die Methode handleRequest direkt eine String zurückliefern. Dieser würde dann ohne weitere Verarbeitung im Frontend angezeigt. Im Beispiel oben wird statt dessen NULL zurückgegeben. Dadurch wird die Ausgabe über eine View-Klasse geleitet und man kann HTML-Template verwenden. Alle Daten, die für die Ausgabe benötigt werden, sollten in das Objekt $viewdata geschrieben werden.
 
 ## Die Views
 
-Wenn der Controller nun mit seiner Arbeit fertig ist und alle notwendigen Daten gesammelt bzw. verarbeitet wurden, dann ist die View-Klasse am Zug. Vom Controller wird der View über dessen Methode *render($view, &$configurations)* aufgerufen. Wie der Controller hat auch der View einige Dinge zu tun, die sich immer wieder gleichen: Das Laden des HTML-Templates und die Suche des gewünschten Subparts. Diese Arbeiten erledigt die Klasse tx_rnbase_view_Base. Wenn wir also unseren View davon erben lassen, dann hat die Klasse ungefähr dieses Aussehen:
+Wenn der Controller nun mit seiner Arbeit fertig ist und alle notwendigen Daten gesammelt bzw. verarbeitet wurden, dann ist die View-Klasse am Zug. Vom Controller wird der View über dessen Methode render($view, &$configurations) aufgerufen. Wie der Controller hat auch der View einige Dinge zu tun, die sich immer wieder gleichen: Das Laden des HTML-Templates und die Suche des gewünschten Subparts. Diese Arbeiten erledigt die Klasse tx_rnbase_view_Base. Wenn wir also unseren View davon erben lassen, dann hat die Klasse ungefähr dieses Aussehen: 
 ```php
 class tx_t3sponsors_views_SponsorList extends tx_rnbase_view_Base {
-	function createOutput($template, &$viewData, &$configurations, &$formatter) {
-		// Wir holen die Daten von der Action ab
-		$sponsors =& $viewData->offsetGet('sponsors');
-		$listBuilder = tx_rnbase::makeInstance('tx_rnbase_util_ListBuilder');
-		$template = $listBuilder->render($sponsors,
-				$viewData, $template, 'tx_t3sponsors_marker_Sponsor',
-				'sponsorlist.sponsor.', 'SPONSOR', $formatter);
+  function createOutput($template, &$viewData, &$configurations, &$formatter) {
+  	// Wir holen die Daten von der Action ab
+    $sponsors =& $viewData->offsetGet('sponsors');
+	  $listBuilder = tx_rnbase::makeInstance('tx_rnbase_util_ListBuilder');
+    $template = $listBuilder->render($sponsors, 
+    								$viewData, $template, 'tx_t3sponsors_marker_Sponsor', 
+    								'sponsorlist.sponsor.', 'SPONSOR', $formatter);
 		return $template;
-	}
-	/**
-	 * Subpart der im HTML-Template geladen werden soll. Dieser wird der Methode
-	 * createOutput automatisch als $template übergeben.
-	 *
-	 * @return string
-	 */
-	function getMainSubpart() {
-		return '###SPONSORLIST###';
-	}
+  }
+  /**
+   * Subpart der im HTML-Template geladen werden soll. Dieser wird der Methode
+   * createOutput automatisch als $template übergeben. 
+   *
+   * @return string
+   */
+  function getMainSubpart() {
+  	return '###SPONSORLIST###';
+  }
 }
 ```
-Durch die Implementierung der Methode getMainSubpart() bekommt der View direkt den passenden Abschnitt aus dem HTML-Template übergeben. Doch wie findet der View eigentlich die Datei? Diese wird per Konvention ermittelt. Die Actionklasse definiert in der Methode **getTemplateName()** den Typoscript-Key für das HTML-Template. Wenn die Action-Klasse also **sponsorlist** liefert, dann wird das Template über den TS-Key **plugin.t3sponsors.sponsorlistTemplate** gesucht.
-
-Im Beispiel für das Template über den ListBuilder von rn_base gerendert. Nähere Informationen findet man beim [Rendern der Daten](rendering_data.md).
-
+Durch die Implementierung der Methode getMainSubpart() bekommt der View direkt den passenden Abschnitt aus dem HTML-Template übergeben. Doch wie findet der View eigentlich die Datei? Diese wird per Konvention ermittelt. Die Actionklasse definiert in der Methode **getTemplateName()** den Typoscript-Key für das HTML-Template. Wenn die Action-Klasse also **sponsorlist** liefert, dann wird das Template über den TS-Key plugin.t3sponsors.sponsorlistTemplate gesucht.
 
 ## Das Model
 
@@ -158,9 +155,9 @@ Wenn man nun diese Klasse bei der Datenbankabfrage als Option mit angibt, dann w
  $options['wrapperclass'] = 'tx_extkey_data';
  $persons = tx_rnbase_util_DB::doSelect('*', 'tx_extkey_person', $options)
 ```
-In $persons erhalten wir dann ein Array von Objekten. Mit der Klasse Tx_Rnbase_Domain_Model_Base stellt rn_base ein Basisklasse mit einigen zusätzlichen Features bereit. Die Kindklassen müssen hier nur noch ein abstrakte Methode implementieren:
+In $persons erhalten wir dann ein Array von Objekten. Mit der Klasse tx_rnbase_model_base stellt rn_base ein Basisklasse mit einigen zusätzlichen Features bereit. Die Kindklassen müssen hier nur noch ein abstrakte Methode implementieren:
 ```php
-class tx_extkey_models_export extends Tx_Rnbase_Domain_Model_Base {
+class tx_extkey_models_export extends tx_rnbase_model_base {
  function getTableName(){return 'tx_extkey_person';}
 }
 ```
@@ -183,7 +180,7 @@ $this->getConfigurations()->convertToUserInt();
 ```
 Bei der Konvertierung in der Action ist darauf zu achten, das dieser Vorgang so zeitig wie möglich durchgeführt wird!
 
-Bei einer Konvertierung von USER auf USER_INT ruft TYPO3 das Plugin mehrfach auf. Der Output des Aufrufs, bei dem die Konvertierung durchgeführt wird, wird komplett ignoriert. Stattdessen wird ein neuer Aufruf über USER_INT erzeugt. Die in rn_base integrierte Konvertierung kümmert sich bereits darum, daß die Plugins nicht unnötig doppelt aufgerufen werden. Dies geschieht dadurch, daß beim Setzen der Konvertierung eine Skip Exception geworfen und somit das Rendering ignoriert wird.
+Bei einer Konvertierung von USER auf USER_INT ruft TYPO3 das Plugin mehrfach auf. Der Output des Aufrufs, bei dem die Konvertierung durchgeführt wird, wird komplett ignoriert. Stattdessen wird ein neuer Aufruf über USER_INT erzeugt. Die in rn_base integrierte Konvertierung kümmert sich bereits darum, daß die Plugins nicht unnötig doppelt aufgerufen werden. Dies geschieht dadurch, daß beim Setzen der Konvertierung eine Skip Exception geworfen und somit das Rendering ignoriert wird. 
 
 ##Exceptionhandling
 
@@ -207,7 +204,7 @@ Legt Fest, ob im Fehlerfall ein 503 Header gesetzt werden soll. Dies ist vor all
 
 **sendEmailOnException**
 
-Legt fest, ob und an welche Email-Adresse im Falle eines Fehlers versendet werden soll.
+Legt fest, ob und an welche Email-Adresse im Falle eines Fehlers versendet werden soll. 
 
 
 ###spezielle Fehlermeldungen
@@ -242,7 +239,7 @@ Beispiel Sprachdatei
 		<languageKey index="default" type="array">
 			<label index="ERROR_default">Es ist ein unerwarteter Fehler aufgetreten!</label>
 			<label index="ERROR_180150">Oops, diesen Datensatz gibt es leider nicht mehr.</label>
-			<label index="ERROR_180160">Dieser Eintrag ist leider nur für angemeldete Personen sichtbar.</label>
+			<label index="ERROR_180160">Dieser Eintrag ist leider nur für angemeldete Personen sichtbar.</label>        			
 		</languageKey>
 	</data>
 </T3locallang>
@@ -264,22 +261,6 @@ plugin.tx_extension {
 		10.wrap = <p>|</p>
 		20 = < plugin.tx_extension
 		20.action = tx_extension_action_AlternativeAusgabe
-	}
-}
-```
-
-###Einbinden von JS und CSS-Dateien
-Man kann auf Ebene einer Action Resourcedateien einbinden. Das kann man direkt per Typoscript konfigurieren:
-
-```
-plugin.tx_myext {
-	myview {
-		includeJSFooter {
-			1 = EXT:myext/Resources/Public/Scripts/validator.js
-		}
-		includeCSS {
-			1 = EXT:myext/Resources/Public/Styles/validator.css
-		}
 	}
 }
 ```

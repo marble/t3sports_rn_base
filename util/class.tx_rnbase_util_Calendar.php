@@ -78,6 +78,8 @@ class tx_rnbase_util_Calendar {
       $date[$key] = $date[$key] + $amount;
       $this->_time = $this->_mktime($date);
     }
+
+//t3lib_utility_Debug::debug($this->_time, 'add() utl_cal');
   }
 
 	/**

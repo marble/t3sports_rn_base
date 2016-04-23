@@ -21,6 +21,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once t3lib_extMgm::extPath('rn_base', 'class.tx_rnbase.php');
+
 /**
  * Contains utility functions for TypoScript
  *
@@ -33,7 +35,11 @@ class tx_rnbase_util_TS {
 	 * @return \TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser
 	 */
 	private static function getTsParser() {
-		return tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getTypoScriptParserClass());
+		tx_rnbase::load('tx_rnbase_util_TYPO3');
+		if(tx_rnbase_util_TYPO3::isTYPO60OrHigher())
+			return t3lib_div::makeInstance('TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser');
+		else
+			return t3lib_div::makeInstance('t3lib_tsparser');
 	}
 
 	/**

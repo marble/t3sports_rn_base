@@ -22,6 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
 tx_rnbase::load('tx_rnbase_cache_ICache');
 
@@ -59,6 +60,11 @@ class tx_rnbase_cache_TYPO3Cache46 implements tx_rnbase_cache_ICache {
 				)
 			);
 			$this->getT3CacheManager()->setCacheConfigurations($defaultCache);
+
+//			// Das Transient ist in der 4.3.0 nicht konfiguriert
+//			if(!array_key_exists('t3lib_cache_backend_TransientMemoryBackend', $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheBackends'])) {
+//				$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheBackends']['t3lib_cache_backend_TransientMemoryBackend'] = 't3lib/cache/backend/class.t3lib_cache_backend_transientmemorybackend.php:t3lib_cache_backend_TransientMemoryBackend';
+//			}
 		}
 	}
 

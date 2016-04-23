@@ -22,15 +22,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_Misc');
 tx_rnbase::load('tx_rnbase_util_Templates');
-tx_rnbase::load('Tx_Rnbase_Frontend_Marker_BaseMarker');
+
 
 
 /**
  * Base class for Markers.
  */
-class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
+class tx_rnbase_util_BaseMarker {
 	private $defaultMarkerArr = array();
 	/** Array for dummy objects */
 	private static $emptyObjects = array();
@@ -41,7 +42,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
   /**
    * Initialisiert die Labels für die eine Model-Klasse
    *
-   * @param string $classname child class of Tx_Rnbase_Domain_Model_RecordInterface or NULL
+   * @param string $classname child class of tx_rnbase_model_base or NULL
    * @param tx_rnbase_util_FormatUtil $formatter
    * @param array $defaultMarkerArr
    */
@@ -54,7 +55,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
   /**
    * Initialisiert die Labels für die eine Model-Klasse
    *
-   * @param string $classname child class of Tx_Rnbase_Domain_Model_RecordInterface or NULL
+   * @param string $classname child class of tx_rnbase_model_base or NULL
    * @param tx_rnbase_util_FormatUtil $formatter
    * @param string $confId
    * @param array $defaultMarkerArr
@@ -89,7 +90,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
   public function initTSLabelMarkers(&$formatter, $confId, $marker, $defaultMarkerArr = 0) {
     $arr1 = array();
     if($labels = $formatter->configurations->get($confId.'labels')) {
-      $labels = tx_rnbase_util_Strings::trimExplode(',', $labels);
+      $labels = t3lib_div::trimExplode(',', $labels);
       $labelArr = array();
       foreach ($labels as $label) {
         // Für die Abfrage nach den Labels dürfen keine Punkte als Trenner verwendet werden
@@ -99,6 +100,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
       }
       $arr1 = $formatter->getItemMarkerArrayWrapped($labelArr, $confId , 0, $marker.'_');
     }
+//    t3lib_utility_Debug::debug($labelId, 'tx_rnbase_util_BaseMarker');
     $this->defaultMarkerArr = array_merge($arr1, $this->defaultMarkerArr);
     return $this->defaultMarkerArr;
   }
@@ -109,7 +111,6 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
    * @param string $template
    * @param string $marker
    * @return array
-   * @deprecated use Tx_Rnbase_Frontend_Marker_Utility::findUnusedAttributes
    */
   public static function findUnusedCols(&$record, $template, $marker) {
 		$ignore = array();
@@ -128,7 +129,6 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
 		}
 		return $ignore;
   }
-
 
   protected static $token = '';
   /**
@@ -178,6 +178,18 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
 	public static function initLink(&$markerArray, &$subpartArray, &$wrappedSubpartArray, $formatter, $confId, $linkId, $marker, $parameterArr, $template='') {
 		$makeUrl = $makeLink = TRUE;
 		$linkMarker = self::checkLinkExistence($linkId, $marker, $template, $makeUrl, $makeLink);
+/*
+		$linkMarker = $marker . '_' . strtoupper($linkId).'LINK';
+		// Do we need links
+		$makeUrl = $makeLink = TRUE;
+		if($template) {
+			$makeLink = self::containsMarker($template, $linkMarker);
+			$makeUrl = self::containsMarker($template, $linkMarker.'URL');
+		}
+		if(!$makeLink && !$makeUrl) {
+			return; // Nothing to do
+		}
+*/
 		if(!$linkMarker) {
 			return; // Nothing to do
 		}
@@ -186,7 +198,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
 		$token = self::getToken();
 		$linkObj->label($token);
 		$links = $formatter->configurations->get($confId.'links.');
-		if(($links[$linkId] || $links[$linkId.'.']) && !$formatter->getConfigurations()->getBool($confId.'links.'.$linkId.'.disable', TRUE, FALSE) ) {
+		if($links[$linkId] || $links[$linkId.'.']) {
 			$linkObj->initByTS($formatter->getConfigurations(), $confId.'links.'.$linkId.'.', $parameterArr);
 
 			if($makeLink)
@@ -253,6 +265,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
 		$out = array();
 		$link = $configurations->createLink(); // Link auf die eigene Seite
 		$link->initByTS($configurations, $confId.'link.', array());
+//		$link->destination($GLOBALS['TSFE']->id); // Das Ziel der Seite vorbereiten
 		$token = md5(microtime());
 		$link->label($token);
 		$emptyArr = array();
@@ -297,15 +310,14 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
    * @return object
    */
 	protected static function getEmptyInstance($classname) {
-		if (!is_object(self::$emptyObjects[$classname])) {
-			/* @var $dummy Tx_Rnbase_Domain_Model_DomainInterface */
-			$dummyInstance = tx_rnbase::makeInstance($classname, array('uid' => 0));
-			foreach ($dummyInstance->getColumnNames() as $column) {
-				$dummyInstance->setProperty($column, '');
-			}
-			self::$emptyObjects[$classname] = $dummyInstance;
+		if(!is_object(self::$emptyObjects[$classname])) {
+    	$dummy = tx_rnbase::makeInstance($classname, array('uid' => 0));
+    	$cols = $dummy->getColumnNames();
+    	for($i=0, $cnt = count($cols); $i < $cnt; $i++) {
+    		$dummy->record[$cols[$i]] = '';
+    	}
+    	self::$emptyObjects[$classname] = $dummy;
 		}
-
 		return self::$emptyObjects[$classname];
 	}
 
@@ -336,7 +348,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
 		$suffixesToTry = self::getSuffixesToTry($formatter->getConfigurations());
 		foreach ($allSingleMarkers as $marker) {
 			if (preg_match('/MARKERMODULE__([A-Z0-9_\-])*/', $marker)) {
-				$module = tx_rnbase::makeInstanceService('markermodule', substr($marker, 14));
+				$module = t3lib_div::makeInstanceService('markermodule', substr($marker, 14));
 				if (is_object($module)) {
 					$subTemplate = tx_rnbase_util_Templates::getSubpart($template, '###'.$marker.'###');
 					$value = $module->getMarkerValue($params, $formatter);
@@ -364,7 +376,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
 		$allMarkers = array_unique($match[1]);
 		foreach ($allMarkers as $marker) {
 			if (preg_match('/MARKERMODULE__([A-Z0-9_\-])*/', $marker)) {
-				$module = tx_rnbase::makeInstanceService('markermodule', substr($marker, 14));
+				$module = t3lib_div :: makeInstanceService('markermodule', substr($marker, 14));
 				if (is_object($module)) {
 					$subTemplate = $formatter->cObj->getSubpart($template, '###'.$marker.'###');
 					$subpart = $module->parseTemplate($subTemplate, $params, $formatter);
@@ -406,6 +418,7 @@ class tx_rnbase_util_BaseMarker extends Tx_Rnbase_Frontend_Marker_BaseMarker {
 	 */
 	public static function containsMarker($template, $markerPrefix) {
 		return (strpos($template, '###'.$markerPrefix) !== FALSE);
+//		return (preg_match('/###'.$markerPrefix.'([A-Z0-9_-])*/', $template)) > 0;
 	}
 	/**
 	 * Start TimeTrack section

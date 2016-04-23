@@ -22,6 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_ListMarkerInfo');
 
 /**
@@ -78,26 +79,18 @@ class tx_rnbase_util_ListMarker {
 	}
 	/**
 	 * Callback function for next item
-	 * @param Tx_Rnbase_Domain_Model_DomainInterface $data
+	 * @param object $data
 	 */
 	public function renderNext($data) {
-		$this->setToData(
-			$data,
-			array(
-				'roll' => $this->rowRollCnt,
-				// Marker für aktuelle Zeilenummer
-				'line' => $this->i,
-				// Marker für aktuelle Zeilenummer der Gesamtliste
-				'totalline' => $this->i + $this->totalLineStart + $this->offset,
-			)
-		);
+		$data->record['roll'] = $this->rowRollCnt;
+		$data->record['line'] = $this->i; // Marker für aktuelle Zeilenummer
+		$data->record['totalline'] = $this->i+$this->totalLineStart+$this->offset; // Marker für aktuelle Zeilenummer der Gesamtliste
 		$this->handleVisitors($data);
 		$part = $this->entryMarker->parseTemplate($this->info->getTemplate($data), $data, $this->formatter, $this->confId, $this->marker);
 		$this->parts[] = $part;
 		$this->rowRollCnt = ($this->rowRollCnt >= $this->rowRoll) ? 0 : $this->rowRollCnt + 1;
 		$this->i++;
 	}
-
 	/**
 	 * Call all visitors for an item
 	 * @param object $data
@@ -110,7 +103,7 @@ class tx_rnbase_util_ListMarker {
 
 	/**
 	 * Render an array of objects
-	 * @param array|Traversable $dataArr
+	 * @param array $dataArr
 	 * @param string $template
 	 * @param string $markerClassname
 	 * @param string $confId
@@ -126,59 +119,25 @@ class tx_rnbase_util_ListMarker {
 		$this->info->init($template, $formatter, $marker);
 
 		$parts = array();
-		$rowRoll = $formatter->getConfigurations()->getInt($confId . 'roll.value');
+		$rowRoll = intval($formatter->configurations->get($confId.'roll.value'));
 		$rowRollCnt = 0;
-		$totalLineStart = $formatter->getConfigurations()->getInt($confId.'totalline.startValue');
+		$totalLineStart = intval($formatter->configurations->get($confId.'totalline.startValue'));
 		// Gesamtzahl der Liste als Register speichern
-		$registerName = $formatter->getConfigurations()->get($confId.'registerNameLbSize');
-		$GLOBALS['TSFE']->register[$registerName ? $registerName : 'RNBASE_LB_SIZE'] = count($dataArr);
-		$i = 0;
-		foreach ($dataArr as $data) {
-			/* @var $data Tx_Rnbase_Domain_Model_DomainInterface */
+		$GLOBALS['TSFE']->register['RNBASE_LB_SIZE'] = count($dataArr);
+		for($i=0, $cnt=count($dataArr); $i < $cnt; $i++) {
 			$data = $dataArr[$i];
 			// Check for object to avoid warning.
-			if (!is_object($data)) continue;
-			$this->setToData(
-				$data,
-				array(
-					'roll' => $rowRollCnt,
-					// Marker für aktuelle Zeilenummer
-					'line' => $i,
-					// Marker für aktuelle Zeilenummer der Gesamtliste
-					'totalline' => $i + $totalLineStart + $offset,
-				)
-			);
+			if(!is_object($data)) continue;
+			$data->record['roll'] = $rowRollCnt;
+			$data->record['line'] = $i; // Marker für aktuelle Zeilenummer
+			$data->record['totalline'] = $i+$totalLineStart+$offset; // Marker für aktuelle Zeilenummer der Gesamtliste
 			$this->handleVisitors($data);
 			$part = $entryMarker->parseTemplate($this->info->getTemplate($data), $data, $formatter, $confId, $marker);
 			$parts[] = $part;
 			$rowRollCnt = ($rowRollCnt >= $rowRoll) ? 0 : $rowRollCnt + 1;
-			$i++;
 		}
-		$parts = implode(
-			$formatter->getConfigurations()->get($confId . 'implode', TRUE),
-			$parts
-		);
-
+		$parts = implode($formatter->configurations->get($confId.'implode', TRUE), $parts);
 		return $parts;
-	}
-
-	/**
-	 * Extends the object, depending on its instance class
-	 *
-	 * @param objetc $object
-	 * @param array $values
-	 * @return void
-	 */
-	protected function setToData($object, array $values) {
-		$isDataInterface = $object instanceof Tx_Rnbase_Domain_Model_DataInterface;
-		foreach ($values as $field => $value) {
-			if ($isDataInterface) {
-				$object->setProperty($field, $value);
-			}
-			else {
-				$object->record[$field] = $value;
-			}
-		}
 	}
 }
 

@@ -32,6 +32,7 @@
  * @author René Nitzsche <rene@system25.de>
  */
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_view_Base');
 
 /**
@@ -62,10 +63,11 @@ class tx_rnbase_view_phpTemplateEngine extends tx_rnbase_view_Base {
     $viewData =& $configurations->getViewData();
 
     $formatter = tx_rnbase::makeInstance('tx_rnbase_util_FormatUtil', $configurations);
+//t3lib_utility_Debug::debug($formatter);
 
     $path = $this->getTemplate($view);
     // Für den PHP Include benötigen wir den absoluten Pfad
-    $path = tx_rnbase_util_Files::getFileAbsFileName($path);
+    $path = t3lib_div::getFileAbsFileName($path);
 
     ob_start();
     include($path);

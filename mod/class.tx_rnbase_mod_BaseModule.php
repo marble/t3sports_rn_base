@@ -3,7 +3,7 @@
 /***************************************************************
 *  Copyright notice
 *
-*  (c) 2009-2016 Rene Nitzsche (rene@system25.de)
+*  (c) 2009 Rene Nitzsche (rene@system25.de)
 *  All rights reserved
 *
 *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -23,13 +23,11 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
+
 tx_rnbase::load('tx_rnbase_util_TYPO3');
 tx_rnbase::load('tx_rnbase_mod_IModule');
 tx_rnbase::load('tx_rnbase_mod_IModFunc');
-tx_rnbase::load('Tx_Rnbase_Backend_Utility');
-tx_rnbase::load('tx_rnbase_util_Typo3Classes');
-tx_rnbase::load('Tx_Rnbase_Backend_Utility_Icons');
-tx_rnbase::load('Tx_Rnbase_Backend_Module_Base');
 
 $GLOBALS['LANG']->includeLLFile('EXT:rn_base/mod/locallang.xml');
 
@@ -37,14 +35,14 @@ $GLOBALS['LANG']->includeLLFile('EXT:rn_base/mod/locallang.xml');
  * Fertige Implementierung eines BE-Moduls. Das Modul ist dabei nur eine Hülle für die einzelnen Modulfunktionen.
  * Die Klasse stellt also lediglich eine Auswahlbox mit den verfügbaren Funktionen bereit. Neue Funktionen können
  * dynamisch über die ext_tables.php angemeldet werden:
- * 	tx_rnbase_util_Extensions::insertModuleFunction('user_txmkmailerM1', 'tx_mkmailer_mod1_FuncOverview',
- *    tx_rnbase_util_Extensions::extPath($_EXTKEY).'mod1/class.tx_mkmailer_mod1_FuncOverview.php',
+ * 	t3lib_extMgm::insertModuleFunction('user_txmkmailerM1', 'tx_mkmailer_mod1_FuncOverview',
+ *    t3lib_extMgm::extPath($_EXTKEY).'mod1/class.tx_mkmailer_mod1_FuncOverview.php',
  *    'LLL:EXT:mkmailer/mod1/locallang_mod.xml:func_overview'
  *  );
  * Die Funktionsklassen sollten das Interface tx_rnbase_mod_IModFunc implementieren. Eine Basisklasse mit nützlichen
  * Methoden steht natürlich auch bereit: tx_rnbase_mod_BaseModFunc
  */
-abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base implements tx_rnbase_mod_IModule {
+abstract class tx_rnbase_mod_BaseModule extends t3lib_SCbase implements tx_rnbase_mod_IModule {
 	public $doc;
 	private $configurations, $formTool;
 
@@ -54,93 +52,69 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 *
 	 * @return	[type]		...
 	 */
-	public function main()	{
-		// Einbindung der Modul-Funktionen
+	function main()	{
+
+		global $BE_USER, $LANG, $BACK_PATH, $TCA_DESCR, $TCA, $CLIENT, $TYPO3_CONF_VARS;
+		// Einbindung externer Funktionen
 		$this->checkExtObj();
 		// Access check!
 		// The page will show only if there is a valid page and if this page may be viewed by the user
-		$this->pageinfo = Tx_Rnbase_Backend_Utility::readPageAccess($this->getPid(), $this->perms_clause);
+		$this->pageinfo = t3lib_BEfunc::readPageAccess($this->getPid(), $this->perms_clause);
+		$access = is_array($this->pageinfo) ? 1 : 0;
 		$this->initDoc($this->getDoc());
 
-		if ($this->useModuleTemplate()) {
-			$this->setContentThroughModuleTemplate();
-		} else {
-			$this->setContentThroughDocumentTemplate();
+		if(tx_rnbase_util_TYPO3::isTYPO42OrHigher()) {
+			$this->content .= $this->moduleContent(); // Muss vor der Erstellung des Headers geladen werden
+			$this->content .= $this->getDoc()->sectionEnd();  // Zur Sicherheit eine offene Section schließen
+
+			$header = $this->getDoc()->header($LANG->getLL('title'));
+			$this->content = $this->content; // ??
+			// ShortCut
+			if ($BE_USER->mayMakeShortcut())	{
+				$this->content.=$this->getDoc()->spacer(20).$this->getDoc()->section('', $this->getDoc()->makeShortcutIcon('id', implode(',', array_keys($this->MOD_MENU)), $this->MCONF['name']));
+			}
+			$this->content.=$this->getDoc()->spacer(10);
+			// Setting up the buttons and markers for docheader
+			$docHeaderButtons = $this->getButtons();
+			$markers['CSH'] = $docHeaderButtons['csh'];
+			$markers['HEADER'] = $header;
+			$markers['SELECTOR'] = $this->selector ? $this->selector : $this->subselector; // SubSelector is deprecated!!
+
+			// Das FUNC_MENU enthält die Modul-Funktionen, die per ext_tables.php registriert werden
+			$markers['FUNC_MENU'] = $this->getFuncMenu();
+			// SUBMENU sind zusätzliche Tabs die eine Modul-Funktion bei Bedarf einblenden kann.
+			$markers['SUBMENU'] = $this->tabs;
+			$markers['TABS'] = $this->tabs; // Deprecated use ###SUBMENU###
+			$markers['CONTENT'] = $this->content;
+		}
+		else {
+			// HeaderSection zeigt Icons und Seitenpfad
+			$headerSection = $this->getDoc()->getHeader('pages', $this->pageinfo, $this->pageinfo['_thePath']).'<br />'.$LANG->sL('LLL:EXT:lang/locallang_core.xml:labels.path').': '.t3lib_div::fixed_lgd_cs($this->pageinfo['_thePath'], -50);
+			$this->content .= $this->moduleContent(); // Muss vor der Erstellung des Headers geladen werden
+			$this->content .= $this->getDoc()->sectionEnd();  // Zur Sicherheit einen offene Section schließen
+
+			// startPage erzeugt alles bis Beginn Formular
+			$header.=$this->getDoc()->startPage($LANG->getLL('title'));
+			$header.=$this->getDoc()->header($LANG->getLL('title'));
+			$header.=$this->getDoc()->spacer(5);
+			$header.=$this->getDoc()->section('', $this->getDoc()->funcMenu($headerSection, t3lib_BEfunc::getFuncMenu($this->getPid(), 'SET[function]', $this->MOD_SETTINGS['function'], $this->MOD_MENU['function'])));
+			$header.=$this->getDoc()->divider(5);
+
+			$this->content = $header . $this->content;
+
+			// ShortCut
+			if ($BE_USER->mayMakeShortcut())	{
+				$this->content.=$this->getDoc()->spacer(20).$this->getDoc()->section('', $this->getDoc()->makeShortcutIcon('id', implode(',', array_keys($this->MOD_MENU)), $this->MCONF['name']));
+			}
+			$this->content.=$this->getDoc()->spacer(10);
+		}
+
+		if(tx_rnbase_util_TYPO3::isTYPO42OrHigher()) {
+			$content = $this->getDoc()->startPage($LANG->getLL('title'));
+			$content.= $this->getDoc()->moduleBody($this->pageinfo, $docHeaderButtons, $markers);
+			$this->content = $this->getDoc()->insertStylesAndJS($content);
 		}
 	}
-
-	/**
-	 * @return boolean
-	 */
-	protected function useModuleTemplate() {
-		return FALSE;
-	}
-
-	/**
-	 * Der Weg bis TYPO3 6.2
-	 * @return void
-	 */
-	protected function setContentThroughDocumentTemplate() {
-		global $BE_USER;
-
-		$markers = array();
-		$this->content .= $this->moduleContent(); // Muss vor der Erstellung des Headers geladen werden
-		$this->content .= $this->getDoc()->sectionEnd();  // Zur Sicherheit eine offene Section schließen
-
-		$header = $this->getDoc()->header($GLOBALS['LANG']->getLL('title'));
-		$this->content = $this->content; // ??
-		// ShortCut
-		if ($BE_USER->mayMakeShortcut())	{
-			$this->content.=$this->getDoc()->spacer(20).$this->getDoc()->section('', $this->getDoc()->makeShortcutIcon('id', implode(',', array_keys($this->MOD_MENU)), $this->MCONF['name']));
-		}
-		$this->content.=$this->getDoc()->spacer(10);
-		// Setting up the buttons and markers for docheader
-		$docHeaderButtons = $this->getButtons();
-		$markers['CSH'] = $docHeaderButtons['csh'];
-		$markers['HEADER'] = $header;
-		$markers['SELECTOR'] = $this->selector ? $this->selector : $this->subselector; // SubSelector is deprecated!!
-
-		// Das FUNC_MENU enthält die Modul-Funktionen, die per ext_tables.php registriert werden
-		$markers['FUNC_MENU'] = $this->getFuncMenu();
-		// SUBMENU sind zusätzliche Tabs die eine Modul-Funktion bei Bedarf einblenden kann.
-		$markers['SUBMENU'] = $this->tabs;
-		$markers['TABS'] = $this->tabs; // Deprecated use ###SUBMENU###
-		$markers['CONTENT'] = $this->content;
-
-		$content = $this->getDoc()->startPage($GLOBALS['LANG']->getLL('title'));
-		$content.= $this->getDoc()->moduleBody($this->pageinfo, $docHeaderButtons, $markers);
-		$this->content = $this->getDoc()->insertStylesAndJS($content);
-	}
-
-	/**
-	 * der Weg ab TYPO3 7.6
-	 * @return void
-	 */
-	protected function setContentThroughModuleTemplate() {
-		/* @var $moduleTemplate TYPO3\CMS\Backend\Template\ModuleTemplate */
-		$moduleTemplate = tx_rnbase::makeInstance('TYPO3\\CMS\\Backend\\Template\\ModuleTemplate');
-		$moduleTemplate->getPageRenderer()->loadJquery();
-		$moduleTemplate->getDocHeaderComponent()->setMetaInformation($this->pageinfo);
-		// @TODO das Menü ist nicht funktionell. Weder werden die Locallang Labels
-		// ersetzt, noch funktioniert der onChange Event
-		$moduleTemplate->registerModuleMenu($this->getName());
-		// @TODO Shorticon wie in alter Version einfügen
-		$content = $moduleTemplate->header($GLOBALS['LANG']->getLL('title'));
-		// muss vor dem einfügen der Tabs aufgerufen werden, da die Tabs sonst leer bleiben
-		$this->moduleContent();
-		$content .= $moduleTemplate->section('', $this->tabs, FALSE, FALSE, 0, TRUE);
-		$content .= $moduleTemplate->section('', $this->moduleContent(), FALSE, FALSE, 0, TRUE);
-		// Workaround: jumpUrl wieder einfügen
-		// @TODO Weg finden dass ohne das DocumentTemplate zu machen
-		$content .= '<!--###POSTJSMARKER###-->';
-		$content = $this->getDoc()->insertStylesAndJS($content);
-		// @TODO haupttemplate eines BE moduls enthält evtl. JS/CSS etc.
-		// das wurde bisher über das DocumentTemplate eingefügt, was jetzt
-		// nicht mehr geht. Dafür muss ein Weg gefunden werden.
-		$moduleTemplate->setContent($content);
-		$this->content = $moduleTemplate->renderContent();
-	}
-
 	/**
 	 * Returns the module ident name
 	 * @return string
@@ -153,31 +127,26 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 * Normaly we would call $this->extObjContent(); But this method writes the output to $this->content. We need
 	 * the output directly so this is reimplementation of extObjContent()
 	 *
-	 * @return string
+	 * @return	void
 	 */
-	protected function moduleContent()	{
+	function moduleContent()	{
 		// Dummy-Button für automatisch Submit
 		$content = '<p style="position:absolute; top:-5000px; left:-5000px;">'
             . '<input type="submit" />'
             . '</p>';
-		$this->extObj->pObj = &$this; // Wozu diese Zuweisung? Die Submodule können getModule() verwenden...
-
+		$this->extObj->pObj = &$this;
 		if (is_callable(array($this->extObj, 'main')))	$content.=$this->extObj->main();
-		else $content .= 'Module '.get_class($this->extObj).' has no method main.';
+		else $content .= 'Module has no method main.';
+
 		return $content;
 	}
 
-	/**
-	 * (non-PHPdoc)
-	 * @see t3lib_SCbase::checkExtObj()
-	 */
-	public function checkExtObj()	{
+	function checkExtObj()	{
 		if (is_array($this->extClassConf) && $this->extClassConf['name'])	{
-			$this->extObj = tx_rnbase::makeInstance($this->extClassConf['name']);
+			$this->extObj = t3lib_div::makeInstance($this->extClassConf['name']);
 			$this->extObj->init($this, $this->extClassConf);
 				// Re-write:
-			tx_rnbase::load('tx_rnbase_parameters');
-			$this->MOD_SETTINGS = Tx_Rnbase_Backend_Utility::getModuleData($this->MOD_MENU, tx_rnbase_parameters::getPostOrGetParameter('SET'), $this->MCONF['name'], $this->modMenu_type, $this->modMenu_dontValidateList, $this->modMenu_setDefaultList);
+			$this->MOD_SETTINGS = t3lib_BEfunc::getModuleData($this->MOD_MENU, t3lib_div::_GP('SET'), $this->MCONF['name'], $this->modMenu_type, $this->modMenu_dontValidateList, $this->modMenu_setDefaultList);
 		}
 	}
 
@@ -187,16 +156,11 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 */
 	public function getFormTool() {
 		if(!$this->formTool) {
-			$this->formTool = tx_rnbase::makeInstance(
-				Tx_Rnbase_Backend_Utility::isDispatchMode()
-					? 'Tx_Rnbase_Backend_Form_ToolBox'
-					: 'tx_rnbase_util_FormTool'
-			);
-			$this->formTool->init($this->getDoc(), $this);
+			$this->formTool = tx_rnbase::makeInstance('tx_rnbase_util_FormTool');
+			$this->formTool->init($this->getDoc());
 		}
 		return $this->formTool;
 	}
-
 	/**
 	 * Liefert eine Instanz von tx_rnbase_configurations. Da wir uns im BE bewegen, wird diese mit einem
 	 * Config-Array aus der TSConfig gefüttert. Dabei wird die Konfiguration unterhalb von mod.extkey. genommen.
@@ -206,19 +170,18 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 * Konfiguration mit "page." beginnen muss. Also bspw. "page.lib.test = 42".
 	 *
 	 * Ein eigenes TS-Template für das BE wird in der ext_localconf.php mit dieser Anweisung eingebunden:
-	 * tx_rnbase_util_Extensions::addPageTSConfig('<INCLUDE_TYPOSCRIPT: source="FILE:EXT:myext/mod1/pageTSconfig.txt">');
+	 * t3lib_extMgm::addPageTSConfig('<INCLUDE_TYPOSCRIPT: source="FILE:EXT:myext/mod1/pageTSconfig.txt">');
 	 * @return tx_rnbase_configurations
 	 */
 	public function getConfigurations() {
 		if(!$this->configurations) {
 			tx_rnbase::load('tx_rnbase_configurations');
 			tx_rnbase::load('tx_rnbase_util_Misc');
-			tx_rnbase::load('tx_rnbase_util_Typo3Classes');
 
 			tx_rnbase_util_Misc::prepareTSFE(); // Ist bei Aufruf aus BE notwendig!
-			$cObj = tx_rnbase::makeInstance(tx_rnbase_util_Typo3Classes::getContentObjectRendererClass());
+			$cObj = t3lib_div::makeInstance('tslib_cObj');
 
-			$pageTSconfigFull = Tx_Rnbase_Backend_Utility::getPagesTSconfig($this->getPid());
+			$pageTSconfigFull = t3lib_BEfunc::getPagesTSconfig($this->getPid());
 			$pageTSconfig = $pageTSconfigFull['mod.'][$this->getExtensionKey().'.'];
 			$pageTSconfig['lib.'] = $pageTSconfigFull['lib.'];
 
@@ -260,7 +223,7 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	function printContent()	{
 		$this->content.=$this->getDoc()->endPage();
 
-		$params = $markerArray = $subpartArray = $wrappedSubpartArray = Array();
+		$params = Array();
 		tx_rnbase::load('tx_rnbase_util_BaseMarker');
 		tx_rnbase::load('tx_rnbase_util_Templates');
 		tx_rnbase_util_BaseMarker::callModules($this->content, $markerArray, $subpartArray, $wrappedSubpartArray, $params, $this->getConfigurations()->getFormatter());
@@ -277,12 +240,17 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 */
 	public function getDoc() {
 		if(!$this->doc) {
-			if (isset($GLOBALS['TBE_TEMPLATE'])) {
-				$this->doc = $GLOBALS['TBE_TEMPLATE'];
+			if (tx_rnbase_util_TYPO3::isTYPO42OrHigher()) {
+				if (isset($GLOBALS['TBE_TEMPLATE'])) {
+					$this->doc = $GLOBALS['TBE_TEMPLATE'];
+				}
+				elseif (tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
+					$this->doc = t3lib_div::makeInstance('\\TYPO3\\CMS\\Backend\\Template\\DocumentTemplate');
+				} else {
+					$this->doc = t3lib_div::makeInstance('template');
+				}
 			} else {
-				$this->doc = tx_rnbase::makeInstance(
-					tx_rnbase_util_Typo3Classes::getDocumentTemplateClass()
-				);
+				$this->doc = t3lib_div::makeInstance('bigDoc');
 			}
 		}
 		return $this->doc;
@@ -317,13 +285,13 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	protected function getFuncMenuItems($items) {
 		$visibleItems = $items;
 		if($denyItems = $this->getConfigurations()->get('_cfg.funcmenu.deny')) {
-			$denyItems = tx_rnbase_util_Strings::trimExplode(',', $denyItems);
+			$denyItems = t3lib_div::trimExplode(',', $denyItems);
 			foreach ($denyItems As $item)
 				unset($visibleItems[$item]);
 		}
 		if($allowItems = $this->getConfigurations()->get('_cfg.funcmenu.allow')) {
 			$visibleItems = array();
-			$allowItems = tx_rnbase_util_Strings::trimExplode(',', $allowItems);
+			$allowItems = t3lib_div::trimExplode(',', $allowItems);
 			foreach ($allowItems As $item)
 				$visibleItems[$item] = $items[$item];
 		}
@@ -341,11 +309,12 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 */
 	protected function getModuleTemplate() {
 		$filename = $this->getConfigurations()->get('template');
-		if(file_exists(tx_rnbase_util_Files::getFileAbsFileName($filename, TRUE, TRUE))) {
+		if(file_exists(t3lib_div::getFileAbsFileName($filename, TRUE, TRUE))) {
 			return $filename;
 		}
+		// '../'.t3lib_extMgm::siteRelPath($this->getExtensionKey()) .  'mod1/template.html'
 		$filename = 'EXT:'.$this->getExtensionKey() .  '/mod1/template.html';
-		if(file_exists(tx_rnbase_util_Files::getFileAbsFileName($filename, TRUE, TRUE))) {
+		if(file_exists(t3lib_div::getFileAbsFileName($filename, TRUE, TRUE))) {
 			return $filename;
 		}
 		return 'EXT:rn_base/mod/template.html';
@@ -355,10 +324,11 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 		$doc->form= $this->getFormTag();
 		$doc->docType = 'xhtml_trans';
 		$doc->inDocStyles = $this->getDocStyles();
-		$doc->inDocStylesArray[] = $doc->inDocStyles;
 		$doc->tableLayout = $this->getTableLayout();
-		$doc->setModuleTemplate($this->getModuleTemplate());
-		$doc->loadJavascriptLib('contrib/prototype/prototype.js');
+		if(tx_rnbase_util_TYPO3::isTYPO42OrHigher()) {
+			$doc->setModuleTemplate($this->getModuleTemplate());
+			$doc->loadJavascriptLib('contrib/prototype/prototype.js');
+		}
 		// JavaScript
 		$doc->JScode .= '
 			<script language="javascript" type="text/javascript">
@@ -382,7 +352,8 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 */
 	abstract function getExtensionKey();
 
-	protected function getDocStyles() {
+	function getDocStyles() {
+		if(tx_rnbase_util_TYPO3::isTYPO42OrHigher())
 		$css .= '
 	.rnbase_selector div {
 		float:left;
@@ -399,28 +370,28 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	}';
 	  return $css;
 	}
-	/**
-	 * @deprecated use mod_Tables
-	 * @return multitype:multitype:string  multitype:multitype:string
-	 */
-	public function getTableLayout() {
+	function getTableLayout() {
 		return Array (
-					'table' => Array('<table class="typo3-dblist" width="100%" cellspacing="0" cellpadding="0" border="0">', '</table><br/>'),
-					'0' => Array( // Format für 1. Zeile
-						'tr'		=> Array('<tr class="t3-row-header c-headLineTable">', '</tr>'),
-						// Format für jede Spalte in der 1. Zeile
-						'defCol' => array('<td>', '</td>')
-					),
-					'defRow' => Array ( // Formate für alle Zeilen
-						'tr'	   => Array('<tr class="db_list_normal">', '</tr>'),
-						'defCol' => Array('<td>', '</td>') // Format für jede Spalte in jeder Zeile
-					),
-					'defRowEven' => Array ( // Formate für alle geraden Zeilen
-						'tr'	   => Array('<tr class="db_list_alt">', '</tr>'),
-						// Format für jede Spalte in jeder Zeile
-						'defCol' => array('<td>', '</td>')
-					)
-				);
+				'table' => Array('<table class="typo3-dblist" width="100%" cellspacing="0" cellpadding="0" border="0">', '</table><br/>'),
+				'0' => Array( // Format für 1. Zeile
+					'tr'		=> Array('<tr class="t3-row-header c-headLineTable">', '</tr>'),
+					// Format für jede Spalte in der 1. Zeile
+					'defCol' => (tx_rnbase_util_TYPO3::isTYPO42OrHigher() ?
+												Array('<td>', '</td>') :
+												Array('<td class="c-headLineTable" style="font-weight:bold; color:white;">', '</td>'))
+				),
+				'defRow' => Array ( // Formate für alle Zeilen
+		//          '0' => Array('<td valign="top">', '</td>'), // Format für 1. Spalte in jeder Zeile
+					'tr'	   => Array('<tr class="db_list_normal">', '</tr>'),
+					'defCol' => Array('<td>', '</td>') // Format für jede Spalte in jeder Zeile
+				),
+				'defRowEven' => Array ( // Formate für alle geraden Zeilen
+					'tr'	   => Array('<tr class="db_list_alt">', '</tr>'),
+					// Format für jede Spalte in jeder Zeile
+					'defCol' => Array((tx_rnbase_util_TYPO3::isTYPO42OrHigher() ? '<td>' :
+														'<td class="db_list_alt">'), '</td>')
+				)
+			);
 	}
 
 
@@ -430,7 +401,7 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 * @return	array	all available buttons as an assoc. array
 	 */
 	function getButtons()	{
-		global $BACK_PATH, $BE_USER;
+		global $TCA, $LANG, $BACK_PATH, $BE_USER;
 
 		$buttons = array(
 			'csh' => '',
@@ -439,13 +410,13 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 			'shortcut' => '',
 		);
 			// TODO: CSH
-		$buttons['csh'] = Tx_Rnbase_Backend_Utility::cshItem('_MOD_'.$this->MCONF['name'], '', $GLOBALS['BACK_PATH'], '', TRUE);
+		$buttons['csh'] = t3lib_BEfunc::cshItem('_MOD_'.$this->MCONF['name'], '', $GLOBALS['BACK_PATH'], '', TRUE);
 
 		if($this->id && is_array($this->pageinfo)) {
 
 				// View page
-			$buttons['view'] = '<a href="#" onclick="' . htmlspecialchars(Tx_Rnbase_Backend_Utility::viewOnClick($this->pageinfo['uid'], $BACK_PATH, Tx_Rnbase_Backend_Utility::BEgetRootLine($this->pageinfo['uid']))) . '">' .
-					'<img' . Tx_Rnbase_Backend_Utility_Icons::skinImg($BACK_PATH, 'gfx/zoom.gif') . ' title="' . $GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.php:labels.showPage', 1) . '" hspace="3" alt="" />' .
+			$buttons['view'] = '<a href="#" onclick="' . htmlspecialchars(t3lib_BEfunc::viewOnClick($this->pageinfo['uid'], $BACK_PATH, t3lib_BEfunc::BEgetRootLine($this->pageinfo['uid']))) . '">' .
+					'<img' . t3lib_iconWorks::skinImg($BACK_PATH, 'gfx/zoom.gif') . ' title="' . $GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.php:labels.showPage', 1) . '" hspace="3" alt="" />' .
 					'</a>';
 
 				// Shortcut
@@ -455,9 +426,9 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 
 				// If access to Web>List for user, then link to that module.
 			if ($BE_USER->check('modules', 'web_list'))	{
-				$href = $BACK_PATH . 'db_list.php?id=' . $this->pageinfo['uid'] . '&returnUrl=' . rawurlencode(tx_rnbase_util_Misc::getIndpEnv('REQUEST_URI'));
+				$href = $BACK_PATH . 'db_list.php?id=' . $this->pageinfo['uid'] . '&returnUrl=' . rawurlencode(t3lib_div::getIndpEnv('REQUEST_URI'));
 				$buttons['record_list'] = '<a href="' . htmlspecialchars($href) . '">' .
-						'<img' . Tx_Rnbase_Backend_Utility_Icons::skinImg($BACK_PATH, 'gfx/list.gif') . ' title="' . $GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.php:labels.showList', 1) . '" alt="" />' .
+						'<img' . t3lib_iconWorks::skinImg($BACK_PATH, 'gfx/list.gif') . ' title="' . $GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.php:labels.showList', 1) . '" alt="" />' .
 						'</a>';
 			}
 		}
@@ -468,35 +439,15 @@ abstract class tx_rnbase_mod_BaseModule extends Tx_Rnbase_Backend_Module_Base im
 	 * (Non PHP-doc)
 	 */
 	public function addMessage($message, $title = '', $severity = 0, $storeInSession = FALSE) {
-		$message = tx_rnbase::makeInstance(
-			tx_rnbase_util_Typo3Classes::getFlashMessageClass(),
+		$message = t3lib_div::makeInstance(
+			't3lib_FlashMessage',
 			$message,
 			$title,
 			$severity,
 			$storeInSession
 		);
 
-		$flashMessageQueueClass = tx_rnbase_util_Typo3Classes::getFlashMessageQueueClass();
-		$flashMessageQueueClass::addMessage($message);
-	}
-
-	/**
-	 * @see TYPO3\CMS\Backend\Utility\BackendUtility::getLinkToDataHandlerAction
-	 * @see TYPO3\CMS\Backend\Template\DocumentTemplate::issueCommand
-	 * @see template::issueCommand
-	 *
-	 * @param string $getParameters
-	 * @param string $redirectUrl
-	 * @return string
-	 */
-	public function issueCommand($getParameters, $redirectUrl = '') {
-		if (tx_rnbase_util_TYPO3::isTYPO76OrHigher()) {
-			$link = TYPO3\CMS\Backend\Utility\BackendUtility::getLinkToDataHandlerAction($getParameters, $redirectUrl);
-		} else {
-			$link = $this->getDoc()->issueCommand($getParameters, $redirectUrl);
-		}
-
-		return $link;
+		t3lib_FlashMessageQueue::addMessage($message);
 	}
 
 }

@@ -50,8 +50,7 @@ class tx_rnbase_plot_DataProviderTS implements tx_rnbase_plot_IDataProvider {
 		$arrConf = $confArr['dataStyle.'];
 		$objFillStyle = tx_pbimagegraph::factory('tx_pbimagegraph_Fill_Array');
 		if(!is_object($arrConf)) return $objFillStyle;
-		$templateServiceClass = tx_rnbase_util_Typo3Classes::getTemplateServiceClass();
-		$arrKeys=$templateServiceClass::sortedKeyList($arrConf);
+		$arrKeys=t3lib_TStemplate::sortedKeyList($arrConf);
 		foreach($arrKeys as $strKey) {
 			$strType=$arrConf[$strKey];
 			if (intval($strKey) && !strstr($strKey, '.')) {
@@ -84,8 +83,7 @@ class tx_rnbase_plot_DataProviderTS implements tx_rnbase_plot_IDataProvider {
 		$objDatasets = array();
 		$intCount = 0;
 		if (is_array($arrConf)) {
-			$templateServiceClass = tx_rnbase_util_Typo3Classes::getTemplateServiceClass();
-			$arrKeys=$templateServiceClass::sortedKeyList($arrConf);
+			$arrKeys=t3lib_TStemplate::sortedKeyList($arrConf);
 			foreach($arrKeys as $strKey) {
 				$strValue=$arrConf[$strKey];
 				if (intval($strKey) && !strstr($strKey, '.')) {
@@ -115,8 +113,7 @@ class tx_rnbase_plot_DataProviderTS implements tx_rnbase_plot_IDataProvider {
 		if (is_array($arrConf)) {
 			$strName = $arrConf['name'];
 			$dataSet->setName($strName);
-			$templateServiceClass = tx_rnbase_util_Typo3Classes::getTemplateServiceClass();
-			$arrKeys=$templateServiceClass::sortedKeyList($arrConf);
+			$arrKeys=t3lib_TStemplate::sortedKeyList($arrConf);
 			foreach($arrKeys as $strKey) {
 				$strValue=$arrConf[$strKey];
 				if (intval($strKey) && !strstr($strKey, '.')) {
@@ -129,6 +126,7 @@ class tx_rnbase_plot_DataProviderTS implements tx_rnbase_plot_IDataProvider {
 						} else {
 							$mixY = $arrConf[$strKey.'.']['y'];
 						}
+						//$mixY = ($arrConf[$strKey.'.']['y']=='null')?NULL:$arrConf[$strKey.'.']['y'];
 						$strId = $arrConf[$strKey.'.']['id'];
 						$dataSet->addPoint($mixX, $mixY, $strId);
 					}

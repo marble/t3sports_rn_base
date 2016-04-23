@@ -108,52 +108,6 @@ class tx_rnbase_util_Arrays {
 		}
 	}
 
-
-	/**
-	 * @see \TYPO3\CMS\Core\Utility\ArrayUtility::mergeRecursiveWithOverrule();
-	 *
-	 * @param array $arr Data array which should be outputted
-	 * @param mixed $valueList List of keys which should be listed in the output string. Pass a comma list or an array. An empty list outputs the whole array.
-	 * @param integer $valueLength Long string values are shortened to this length. Default: 20
-	 * @return string Output string with key names and their value as string
-	 */
-	static public function arrayToLogString(array $arr, $valueList = array(), $valueLength = 20) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::arrayToLogString($arr, $valueList, $valueLength);
-	}
-
-	/**
-	 * @see \TYPO3\CMS\Core\Utility\GeneralUtility::xml2array
-	 * @see t3lib_div::xml2array
-	 *
-	 * @param string $string XML content to convert into an array
-	 * @param string $NSprefix The tag-prefix resolve, eg. a namespace like "T3:"
-	 * @param boolean $reportDocTag If set, the document tag will be set in the key "_DOCUMENT_TAG" of the output array
-	 * @return mixed If the parsing had errors, a string with the error message is returned. Otherwise an array with the content.
-	 * @see array2xml(),xml2arrayProcess()
-	 */
-	static public function xml2array($string, $NSprefix = '', $reportDocTag = FALSE) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::xml2array($string, $NSprefix, $reportDocTag);
-	}
-
-	/**
-	 * Entfernt alle Keys welche nicht in needle vorhanden sind
-	 *
-	 * @param 	array	$aData		Zu filternde Daten
-	 * @param 	array	$aNeedle	Enthält die erlaubten Keys
-	 * @return 	array
-	 */
-	static public function removeNotIn(array $data, array $needle) {
-		if (!empty($needle)) {
-			foreach (array_keys($data) as $column) {
-				if (!in_array($column, $needle)) {
-					unset($data[$column]);
-				}
-			}
-		}
-		return $data;
-	}
 }
 
 if (defined('TYPO3_MODE') && $TYPO3_CONF_VARS[TYPO3_MODE]['XCLASS']['ext/rn_base/util/class.tx_rnbase_util_Arrays.php']) {

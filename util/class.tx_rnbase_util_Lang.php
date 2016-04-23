@@ -2,7 +2,7 @@
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2012-2016 Rene Nitzsche (rene@system25.de)
+ *  (c) 2012 Rene Nitzsche (rene@system25.de)
  *  All rights reserved
  *
  *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -21,14 +21,10 @@
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Files');
+
 
 /**
  * Wrapper for language usage.
- *
- * @package TYPO3
- * @subpackage tx_rnbase
- * @author Rene Nitzsche
  */
 class tx_rnbase_util_Lang {
 	protected $LOCAL_LANG = array();
@@ -39,26 +35,24 @@ class tx_rnbase_util_Lang {
 	 * merging with the existing local lang
 	 *
 	 * @param string $filename
-	 *
 	 * @return void
 	 */
 	public function loadLLFile($filename) {
-		if (!$filename) return;
+		if(!$filename)	return;
 
 		// Find language file
-		$basePath = tx_rnbase_util_Files::getFileAbsFileName($filename);
+		$basePath = t3lib_div::getFileAbsFileName($filename);
 		// php or xml as source: In any case the charset will be that of the system language.
 		// However, this function guarantees only return output for default language plus the specified language (which is different from how 3.7.0 dealt with it)
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		self::addLang($utility::readLLfile($basePath, self::getLLKey(), $GLOBALS['TSFE']->renderCharset));
+		self::addLang(t3lib_div::readLLfile($basePath, self::getLLKey(), $GLOBALS['TSFE']->renderCharset));
 		if ($llKey = self::getLLKey(TRUE)) {
-			self::addLang($utility::readLLfile($basePath, $llKey, $GLOBALS['TSFE']->renderCharset));
+			self::addLang(t3lib_div::readLLfile($basePath, $llKey, $GLOBALS['TSFE']->renderCharset));
 		}
 	}
 
 
 	/**
-	 * Load local lang from TS. exsting local lang
+	 * load local lang from TS. exsting local lang
 	 * is enhanced/overlayed
 	 *
 	 * @param array $langArr
@@ -72,10 +66,9 @@ class tx_rnbase_util_Lang {
 	}
 
 	/**
-	 * Get the configured language
+	 * get the configured language
 	 *
 	 * @param boolean $alt
-	 *
 	 * @return string
 	 */
 	protected function getLLKey($alt = FALSE) {
@@ -85,9 +78,7 @@ class tx_rnbase_util_Lang {
 
 	/**
 	 * Add a new local lang array from Typoscript _LOCAL_LANG. Merged with existing local lang
-	 *
 	 * @param array $langArr
-	 *
 	 * @return void
 	 */
 	protected function addLang($langArr) {
@@ -109,10 +100,10 @@ class tx_rnbase_util_Lang {
 	protected function loadLLOverlay($langArr) {
 		if (!is_array($langArr))
 			return;
-		while (list($k, $lA)=each($langArr)) {
+		while(list($k, $lA)=each($langArr)) {
 			if (is_array($lA)) {
 				$k = substr($k, 0, -1);
-				foreach ($lA as $llK => $llV) {
+				foreach($lA as $llK => $llV) {
 					if (!is_array($llV)) {
 						$this->LOCAL_LANG[$k][$llK] = $llV;
 						if ($k != 'default') {
@@ -161,15 +152,8 @@ class tx_rnbase_util_Lang {
 	/**
 	 * Returns the localized label of the LOCAL_LANG key.
 	 * This is a reimplementation from tslib_pibase::pi_getLL().
-	 *
-	 * @param string $key
-	 * @param string $alt
-	 * @param string $hsc
-	 * @param string $labelDebug
-	 *
-	 * @return string
 	 */
-	public function getLL($key, $alt = '', $hsc = FALSE, $labelDebug = FALSE) {
+	public function getLL($key, $alt='', $hsc=FALSE, $labelDebug=FALSE) {
 		$label = tx_rnbase_util_TYPO3::isTYPO46OrHigher() ? $this->getLL46($key, $alt, $hsc) : $this->getLL40($key, $alt, $hsc);
 		if ($labelDebug) {
 			$options = array();
@@ -183,21 +167,7 @@ class tx_rnbase_util_Lang {
 		return $label;
 	}
 
-	/**
-	 * Returns the localized label of the LOCAL_LANG key.
-	 * This is a reimplementation from tslib_pibase::pi_getLL().
-	 *
-	 * @param string $key
-	 * @param string $alternativeLabel
-	 * @param string $hsc
-	 *
-	 * @return string
-	 */
 	private function getLL46($key, $alternativeLabel = '', $hsc = FALSE) {
-		// support for LLL: syntax
-		if(!strcmp(substr($key, 0, 4), 'LLL:')) {
-			return self::sL($key);
-		}
 		if (isset($this->LOCAL_LANG[$this->getLLKey()][$key][0]['target'])) {
 
 			// The "from" charset of csConv() is only set for strings from TypoScript via _LOCAL_LANG
@@ -237,20 +207,9 @@ class tx_rnbase_util_Lang {
 		return $output;
 	}
 
-
-	/**
-	 * Returns the localized label of the LOCAL_LANG key.
-	 * This is a reimplementation from tslib_pibase::pi_getLL().
-	 *
-	 * @param string $key
-	 * @param string $alt
-	 * @param string $hsc
-	 *
-	 * @return string
-	 */
-	private function getLL40($key, $alt = '', $hsc = FALSE) {
-		if (!strcmp(substr($key, 0, 4), 'LLL:')) {
-			return self::sL($key);
+	private function getLL40($key, $alt='', $hsc=FALSE) {
+		if(!strcmp(substr($key, 0, 4), 'LLL:')) {
+			return $GLOBALS['TSFE']->sL($key);
 		}
 
 		if (isset($this->LOCAL_LANG[$this->getLLKey()][$key])) {
@@ -268,35 +227,14 @@ class tx_rnbase_util_Lang {
 			// Im BE die LANG fragen...
 			$word = is_object($GLOBALS['LANG']) ? $GLOBALS['LANG']->getLL($key) : '';
 			if(!$word)
-				$word = $this->LLtestPrefixAlt . $alt;
+				$word = $this->LLtestPrefixAlt.$alt;
 		}
 
-		$output = $this->LLtestPrefix . $word;
+		$output = $this->LLtestPrefix.$word;
 		if ($hsc)
 			$output = htmlspecialchars($output);
 
 		return $output;
-	}
-
-	/**
-	 * Split Label function
-	 *
-	 * @param string $key Key string. Accepts the "LLL:" prefix.
-	 *
-	 * @return string Label value, if any.
-	 */
-	public static function sL($key) {
-		/* @var $lang TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController */
-		/* @var $lang TYPO3\CMS\Lang\LanguageService */
-		$lang = $GLOBALS[TYPO3_MODE == 'BE' ? 'LANG' : 'TSFE'];
-
-		if (!$lang) {
-			throw new Exception(
-				'Languageservice for "' . TYPO3_MODE . '" not initialized yet.'
-			);
-		}
-
-		return $lang->sL($key);
 	}
 }
 

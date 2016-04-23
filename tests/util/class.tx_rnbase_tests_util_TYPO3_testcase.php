@@ -22,12 +22,13 @@
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 tx_rnbase::load('tx_rnbase_util_TCA');
 
 /**
  * @author Hannes Bochmann <hannes.bochmann@dmk-business.de>
  */
-class tx_rnbase_tests_util_TYPO3_testcase extends Tx_Phpunit_TestCase {
+class tx_rnbase_tests_util_TYPO3_testcase extends tx_phpunit_testcase {
 
 	/**
 	 * @group unit

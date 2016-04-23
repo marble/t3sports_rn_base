@@ -2,7 +2,7 @@
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2007-2016 Rene Nitzsche (rene@system25.de)
+ *  (c) 2007-2013 Rene Nitzsche (rene@system25.de)
  *  All rights reserved
  *
  *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -22,74 +22,63 @@
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
+require_once(t3lib_extMgm::extPath('rn_base') . 'class.tx_rnbase.php');
 
-tx_rnbase::load('tx_rnbase_util_SimpleMarker');
+tx_rnbase::load('tx_rnbase_util_BaseMarker');
 
 tx_rnbase::load('tx_rnbase_util_TYPO3');
 if(!tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
-	if(tx_rnbase_util_Extensions::isLoaded('dam')) {
-		require_once(tx_rnbase_util_Extensions::extPath('dam') . 'lib/class.tx_dam_db.php');
+	if(t3lib_extMgm::isLoaded('dam')) {
+		require_once(t3lib_extMgm::extPath('dam') . 'lib/class.tx_dam_db.php');
 	}
 }
 
 
 /**
- * Diese Klasse ist für das Rendern von DAM/FAL-Media Dateien verantwortlich
+ * Diese Klasse ist für das Rendern von DAM-Media Dateien verantwortlich
  */
-class tx_rnbase_util_MediaMarker extends tx_rnbase_util_SimpleMarker {
+class tx_rnbase_util_MediaMarker extends tx_rnbase_util_BaseMarker {
+	var $options;
 	private static $damDb = NULL;
-
+	public function tx_rnbase_util_MediaMarker($options=array()) {
+		$this->options = $options;
+		if(!is_array($this->options)) $this->options = array();
+	}
 	/**
-	 * @param array $wrappedSubpartArray das HTML-Template
-	 * @param array $subpartArray das HTML-Template
 	 * @param string $template das HTML-Template
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $item
+	 * @param tx_rnbase_models_media $item the media instance
 	 * @param tx_rnbase_util_FormatUtil $formatter der zu verwendente Formatter
-	 * @param string $confId Pfad der TS-Config
-	 * @param string $marker Name des Markers
+	 * @param string $confId Pfad der TS-Config des Vereins, z.B. 'yourview.obj.picture.media.'
+	 * @param string $marker Name des Markers für das Objekt, z.B. MEDIA
+	 *        Von diesem String hängen die entsprechenden weiteren Marker ab: ###MEDIA_FILE###, ###MEDIA_TITLE### usw.
+	 * @return String das geparste Template
 	 */
-	protected function prepareSubparts(
-			array &$wrappedSubpartArray, array &$subpartArray,
-			$template, $item, $formatter, $confId, $marker
-	) {
+	public function parseTemplate($template, &$item, &$formatter, $confId, $marker = 'MEDIA') {
+		if(!is_object($item)) {
+			return '<!-- Media empty -->';
+		}
+		if(!tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
+			// Localize data (DAM 1.1.0)
+			if(method_exists(self::getDamDB(), 'getRecordOverlay')) {
+				$loc = self::getDamDB()->getRecordOverlay('tx_dam', $item->record, array('sys_language_uid'=>$GLOBALS['TSFE']->sys_language_uid));
+				if ($loc) $item->record = $loc;
+			}
+		}
+		// TODO: record overlay for FAL??
+		tx_rnbase_util_Misc::callHook('rn_base', 'mediaMarker_initRecord', array('item' => &$item, 'template'=>&$template), $this);
+
+		$ignore = self::findUnusedCols($item->record, $template, $marker);
+		$markerArray = $formatter->getItemMarkerArrayWrapped($item->record, $confId , $ignore, $marker.'_');
+		$wrappedSubpartArray = array();
+		$subpartArray = array();
 		// Hook für direkte Template-Manipulation
 		tx_rnbase_util_Misc::callHook('rn_base', 'mediaMarker_beforeRendering',
 			array('template' => &$template, 'item' => &$item, 'formatter' => &$formatter,
 					'confId' => $confId, 'marker' => $marker), $this);
 
-		parent::prepareSubparts($wrappedSubpartArray, $subpartArray, $template, $item, $formatter, $confId, $marker);
-	}
-	/**
-	 * Die Methode kann von Kindklassen verwendet werden.
-	 * @param string $template das HTML-Template
-	 * @param Tx_Rnbase_Domain_Model_RecordInterface $item
-	 * @param tx_rnbase_util_FormatUtil $formatter der zu verwendente Formatter
-	 * @param string $confId Pfad der TS-Config
-	 * @param string $marker Name des Markers
-	 * @return String das geparste Template
-	 */
-	protected function prepareTemplate($template, $item, $formatter, $confId, $marker) {
-		tx_rnbase_util_Misc::callHook('rn_base', 'mediaMarker_initRecord', array('item' => &$item, 'template'=>&$template), $this);
-
-		return $template;
-	}
-
-	protected function prepareItem(
-			Tx_Rnbase_Domain_Model_RecordInterface $item,
-			tx_rnbase_configurations $configurations,
-			$confId
-	) {
-		if(!tx_rnbase_util_TYPO3::isTYPO60OrHigher()) {
-			// Localize data (DAM 1.1.0)
-			if(method_exists(self::getDamDB(), 'getRecordOverlay')) {
-				$loc = self::getDamDB()->getRecordOverlay('tx_dam', $item->getRecord(), array('sys_language_uid'=>$GLOBALS['TSFE']->sys_language_uid));
-				if ($loc) {
-					$item->setProperty($loc);
-				}
-			}
-		}
-		// TODO: record overlay for FAL??
-		parent::prepareItem($item, $configurations, $confId);
+		$out = tx_rnbase_util_BaseMarker::substituteMarkerArrayCached($template, $markerArray, $subpartArray, $wrappedSubpartArray);
+		tx_rnbase_util_Misc::callHook('rn_base', 'mediaMarker_afterSubst', array('item' => &$item, 'template'=>&$template), $this);
+		return $out;
 	}
 
 

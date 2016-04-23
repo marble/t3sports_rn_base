@@ -21,10 +21,10 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************/
-tx_rnbase::load('tx_rnbase_util_Strings');
+
 /**
  * Contains utility functions for formatting
- * TODO: Die Verwendung der Klasse \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer sollte überarbeitet werden.
+ * TODO: Die Verwendung der Klasse tslib_cObj sollte überarbeitet werden.
  */
 class tx_rnbase_util_FormatUtil {
   var $configurations;
@@ -42,9 +42,13 @@ class tx_rnbase_util_FormatUtil {
    * Konstruktor
    * @param tx_rnbase_configurations $configurations
    */
-  function tx_rnbase_util_FormatUtil($configurations) {
+  function tx_rnbase_util_FormatUtil($configurations, $cObjClass = 'tslib_cObj') {
     $this->configurations = $configurations;
+// t3lib_utility_Debug::debug($this->configurations->get('tt_content.') , 'util_formatUtil');
     $this->cObj = $configurations->getCObj();
+
+//    $this->cObj = t3lib_div::makeInstance($cObjClass);
+//    $this->cObj->data = $this->configurations->get('tt_content.');
   }
 
   /**
@@ -94,10 +98,11 @@ class tx_rnbase_util_FormatUtil {
    */
   function wrap($content, $confId, $dataArr = 0){
     return $this->stdWrap($content, $this->configurations->get($confId), $dataArr);
+//    return $this->cObj->stdWrap($content, $this->configurations->get($confId));
   }
 
   /**
-   * Call of \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::stdWrap().
+   * Call of tslib_cObj::stdWrap().
    */
   function stdWrap($content, $conf, $dataArr = 0){
     $tmpArr = $this->cObj->data;
@@ -107,6 +112,7 @@ class tx_rnbase_util_FormatUtil {
     // Data zurücksetzen
     $this->cObj->data = $tmpArr;
     return $ret;
+//    return $this->cObj->stdWrap($content, $conf);
   }
 
   /**
@@ -124,6 +130,7 @@ class tx_rnbase_util_FormatUtil {
     $conf = $this->configurations->get($confId);
     $ret = $this->cObj->stdWrap($content, $conf);
 
+//t3lib_utility_Debug::debug($ret, 'tx_rnbase_util_FormatUtil');
     // Data zurücksetzen
     $this->cObj->data = $tmpArr;
     return $ret;
@@ -138,12 +145,13 @@ class tx_rnbase_util_FormatUtil {
 
     $cObj =& $this->configurations->getCObj($cObjId);
     $theImgCode=$cObj->IMAGE($confArr);
+//t3lib_utility_Debug::debug($confArr, $image.' - DAM util_formatUtil');
 
     return $theImgCode;
   }
 
    /**
-    * Liefert den Wert als Image. Intern wird \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::IMAGE verwendet
+    * Liefert den Wert als Image. Intern wird tslib_cObj::IMAGE verwendet
     */
    function getImage($image, $confId, $extensionKey = 0) {
      if(strlen($image) == 0) return '';
@@ -160,6 +168,11 @@ class tx_rnbase_util_FormatUtil {
      $this->cObj->data = $tmp;
 
      return $theImgCode;
+
+
+//    $confArr["image."]["file"] = "uploads/tx_rnprofiles/".($row["image"]); //The image field name
+//    $theImgCode=$this->cObj->IMAGE($this->conf["image."]);
+
   }
 
 	static $time = 0;
@@ -170,17 +183,12 @@ class tx_rnbase_util_FormatUtil {
 	 * <pre>profile.date.strftime = %Y</pre>
 	 * @return Array
 	 */
-	function getItemMarkerArrayWrapped($record, $confId, $noMap = 0, $markerPrefix='', $initMarkers = 0)
-	{
-		if(!is_array($record)) {
+	function getItemMarkerArrayWrapped($record, $confId, $noMap = 0, $markerPrefix='', $initMarkers = 0){
+		if(!is_array($record))
 			return array();
-		}
-
-		$start = microtime(TRUE);
-		$mem = memory_get_usage();
-
+$start = microtime(TRUE);
+$mem = memory_get_usage();
 		$tmpArr = $this->cObj->data;
-
 		// Ensure the initMarkers are part of the record
 		if(is_array($initMarkers)) {
 			for($i=0, $cnt = count($initMarkers); $i < $cnt; $i++)  {
@@ -188,25 +196,19 @@ class tx_rnbase_util_FormatUtil {
 					$record[$initMarkers[$i]] = '';
 			}
 		}
-
-		// extend the record by dc columns
 		$conf = $this->getConfigurations()->get($confId);
-		if (is_array($conf)) {
+		if($conf) {
 			// Add dynamic columns
 			$keys = $this->getConfigurations()->getUniqueKeysNames($conf);
-			foreach ($keys As $key) {
-				if ($key{0} === 'd' && $key{1} === 'c' && !isset($record[$key])) {
+			foreach($keys As $key) {
+				if(t3lib_div::isFirstPartOfStr($key, 'dc') && !isset($record[$key]))
 					$record[$key] = $conf[$key];
-				}
 			}
 		}
 
 		if(array_key_exists('__MINFO', $record)) {
-			// Die TS-Config in die Ausgabe integrieren
-			$record['__MINFO'] .= tx_rnbase_util_Debug::viewArray(array('TS-Path'=>$confId));
-			$record['__MINFO'] .= tx_rnbase_util_Debug::viewArray(array($conf));
+			$record['__MINFO'] .= tx_rnbase_util_Debug::viewArray($conf);
 		}
-
 		$this->cObj->data = $record;
 
     // Alle Metadaten auslesen und wrappen
@@ -310,7 +312,7 @@ self::$mem += (memory_get_usage() - $mem);
 
   function getDAMColumns() {
     global $TCA;
-    tx_rnbase_util_TCA::loadTCA('tx_dam'); // Wird zur Initialisierung der Marker benötigt
+    t3lib_div::loadTCA('tx_dam'); // Wird zur Initialisierung der Marker benötigt
     return isset($TCA['tx_dam'])? array_keys($TCA['tx_dam']['columns']) :0;
   }
 

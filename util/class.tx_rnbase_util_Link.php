@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This class is a wrapper around \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::typoLink
+ * This class is a wrapper around tslib_cObj::typoLink
  *
  * PHP versions 4 and 5
  *
@@ -28,10 +28,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-tx_rnbase::load('tx_rnbase_util_Network');
 
 /**
- * This class is a wrapper around \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::typoLink
+ * This class is a wrapper around tslib_cObj::typoLink
  *
  * It is not a full implementation of typolink functionality
  * but targeted to the day-to-day requirements. The idea is to provide
@@ -49,7 +48,7 @@ class tx_rnbase_util_Link {
 	var $tagAttributes = array();       // setting attributes for the tag in general
 	var $classString = '';              // tags class attribute
 	var $idString = '';                 // tags id attribute
-	var $cObject;                       // instance of tx_rnbase_util_Typo3Classes::getContentObjectRendererClass()
+	var $cObject;                       // instance of tslib_cObj
 	var $destination = '';              // page id, alias, external link, etc.
 	var $labelString = '';              // tags label
 	var $labelHasAlreadyHtmlSpecialChars = FALSE; // is the label already HSC?
@@ -73,26 +72,25 @@ class tx_rnbase_util_Link {
 	/**
 	 * Construct a link object
 	 *
-	 * By default this object wraps \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::typolink();
+	 * By default this object wraps tslib_cObj::typolink();
 	 * The $cObjectClass parameter can be used to provide a mock object
 	 * for unit tests.
 	 *
 	 * @param	object		mock object for testing purpuses
 	 * @return	void
 	 */
-	function __construct($cObject = NULL) {
+	function __construct($cObject = 'tslib_cObj') {
 		if (is_object($cObject)) {
 			$this->cObject = $cObject;
-		} else {
-			$this->cObject = tx_rnbase::makeInstance(
-				$cObject === NULL ? tx_rnbase_util_Typo3Classes::getContentObjectRendererClass() : $cObject
-			);
+		}
+		else {
+			$this->cObject = t3lib_div::makeInstance($cObject);
 		}
 
 	}
 
 	/**
-	 * @return \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer or tslib_cObj
+	 * @return tslib_cObj
 	 */
 	protected function getCObj() {
 		return $this->cObject;
@@ -168,7 +166,7 @@ class tx_rnbase_util_Link {
 	 * @param	boolean		if TRUE don't parse through htmlspecialchars()
 	 * @return	object		self
 	 * @see		TSref => typolink => parameter
-	 * @see		\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::typoLink()
+	 * @see		tslib_cObj::typoLink()
 	 */
 	public function destination($destination) {
 		$this->destination = $destination;
@@ -362,8 +360,17 @@ class tx_rnbase_util_Link {
 	 */
 	function makeTag() {
 		$link = $this->getCObj()->typolink($this->_makeLabel(), $this->_makeConfig('tag'));
-		if ($this->isAbsUrl() && (@simplexml_load_string($link))) {
-			$link = self::parseAbsUrl($link, $this->getAbsUrlSchema());
+		if($this->isAbsUrl() && ($htmlXml = @simplexml_load_string($link))) {
+			// extract the url from the tag
+			$url = strlen((string) $htmlXml['href']) ? (string) $htmlXml['href'] : (string) $htmlXml['src'];
+			// check for existing absolute href and set absolute url, if there is none
+			if (
+				!($url{0} . $url{1} === '//')
+				&& !array_key_exists('scheme', parse_url($url))
+			) {
+				$url = $this->getAbsUrlSchema() ? $this->getAbsUrlSchema() : t3lib_div::getIndpEnv('TYPO3_REQUEST_DIR');
+				$link = preg_replace('/(href="|src=")/', '${1}'.$url, $link);
+			}
 		}
 		return $link;
 	}
@@ -376,65 +383,16 @@ class tx_rnbase_util_Link {
 	 */
 	function makeUrl($applyHtmlspecialchars = TRUE) {
 		$url = $this->getCObj()->typolink(NULL, $this->_makeConfig('url'));
-		if($this->isAbsUrl()) {
-			$url = self::parseAbsUrl($url, $this->getAbsUrlSchema());
+		if(
+			$this->isAbsUrl()
+			// make only abs, if there is an relative url!
+			&& !($url{0} . $url{1} === '//')
+			&& !array_key_exists('scheme', parse_url($url))
+		) {
+			$schema = $this->getAbsUrlSchema() ? $this->getAbsUrlSchema() : t3lib_div::getIndpEnv('TYPO3_SITE_URL');
+			$url = $schema . $url;
 		}
 		return $applyHtmlspecialchars ? htmlspecialchars($url) : $url;
-	}
-
-	/**
-	 * forces a schema for a url.
-	 * if there is already a schema in the url, the schema will be replaced.
-	 *
-	 * @param string $url
-	 * @param string $schema
-	 * @return string
-	 */
-	public static function parseAbsUrl($url, $schema = FALSE)
-	{
-		if (!$schema) {
-			$schema = tx_rnbase_util_Misc::getIndpEnv('TYPO3_REQUEST_DIR');
-		}
-
-		// check if we have a A-Tag with href attribute or a IMG-Tag with src attribute
-		if ((@simplexml_load_string($url))) {
-			return preg_replace_callback(
-				'/(href="|src=")(.+)"/',
-				function($match) use ($schema) {
-					// $match[1] contains 'href="' or 'src="'
-					// $match[2] contains the url '/service/contact.html'
-					return $match[1] .
-						tx_rnbase_util_Link::parseAbsUrl($match[2], $schema) .
-						'"'
-					;
-				},
-				ltrim($url, '/')
-			);
-		}
-		// else, we have only a url to rebuild
-
-		// rebuild the url without schema
-		$urlParts = parse_url(self::addDefaultSchemaIfRequired($url));
-		$urlPath  = isset($urlParts['path']) ? $urlParts['path'] : '';
-		$urlPath .= isset($urlParts['query']) ? '?' . $urlParts['query'] : '';
-		$urlPath .= isset($urlParts['fragment']) ? '#' . $urlParts['fragment'] : '';
-
-		return rtrim($schema, '/') . '/'. ltrim($urlPath, '/');
-	}
-
-	/**
-	 * Vor PHP 5.4.7 wird die URL nicht korrekt geparsed wenn das Schema fehlt.
-	 * Also fügen wir dann ein default Schema hinzu damit parse_url korrekt funktioniert.
-	 *
-	 * @param string $url
-	 * @return string
-	 */
-	static public function addDefaultSchemaIfRequired($url) {
-		if (version_compare(phpversion(), '5.4.7', '<') && substr($url, 0, 2) == '//') {
-			$url = 'http:' . $url;
-		}
-
-		return $url;
 	}
 
 	/**
@@ -446,7 +404,9 @@ class tx_rnbase_util_Link {
 		session_write_close();
 
 		$target = $this->makeUrl(FALSE);
-		$target = tx_rnbase_util_Network::locationHeaderUrl($target);
+		$target = tx_rnbase_util_TYPO3::isTYPO60OrHigher() ?
+			\TYPO3\CMS\Core\Utility\GeneralUtility::locationHeaderUrl($target) :
+			t3lib_div::locationHeaderUrl($target);
 		header('Location: ' . $target);
 		exit();
 	}
@@ -551,7 +511,7 @@ class tx_rnbase_util_Link {
 
 		// check for qualifier in the keyname
 		if(strstr($key, '::')) {
-			list($qualifier, $key) = tx_rnbase_util_Strings::trimExplode('::', $key);
+			list($qualifier, $key) = t3lib_div::trimExplode('::', $key);
 		}
 
 		if (!is_array($value)) {
@@ -561,8 +521,7 @@ class tx_rnbase_util_Link {
 			;
 		}
 
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::implodeArrayForUrl(
+		return t3lib_div::implodeArrayForUrl(
 			$qualifier ? $qualifier : $key,
 			$qualifier ? array($key => $value) : $value,
 			'',
@@ -604,8 +563,6 @@ class tx_rnbase_util_Link {
 	 *
 	 * @param tx_rnbase_configurations $configurations
 	 * @param string $confId
-	 *
-	 * @return tx_rnbase_util_Link
 	 */
 	public function initByTS($configurations, $confId, $parameterArr) {
 		$parameterArr = is_array($parameterArr) ? $parameterArr : array();
@@ -621,20 +578,16 @@ class tx_rnbase_util_Link {
 		if ($target) {
 			$this->target($target);
 		}
+		// Das Ziel der Seite vorbereiten
+		$this->destination($pid ? $pid : $GLOBALS['TSFE']->id);
+		if ($absUrl = $configurations->get($confId.'absurl')) {
+			$this->setAbsUrl(TRUE, ($absUrl == 1 || strtolower($absUrl) == 'true' ) ? '' : $absUrl);
+		}
 
 		// feste URL für externen Link
-		if ($fixed = $configurations->get($confId.'fixedUrl', TRUE)) {
+		if ($fixed = $configurations->get($confId.'fixedUrl')) {
 			$this->destination($fixed);
 		}
-		// Das Ziel der Seite vorbereiten
-		else {
-			$this->destination($pid ? $pid : $GLOBALS['TSFE']->id);
-			// absolute und ggf. schema url erzeugen
-			if ($absUrl = $configurations->get($confId . 'absurl')) {
-				$this->setAbsUrl(TRUE, ($absUrl == 1 || strtolower($absUrl) == 'true' ) ? '' : $absUrl);
-			}
-		}
-
 		if (array_key_exists('SECTION', $parameterArr)) {
 			$this->anchor(htmlspecialchars($parameterArr['SECTION']));
 			unset($parameterArr['SECTION']);
@@ -682,7 +635,7 @@ class tx_rnbase_util_Link {
 			$allow = $keepVarConf['allow'];
 			$deny = $keepVarConf['deny'];
 			if ($allow) {
-				$allow = tx_rnbase_util_Strings::trimExplode(',', $allow);
+				$allow = t3lib_div::trimExplode(',', $allow);
 				foreach ($allow As $allowed) {
 					$value = $keepVars->offsetGet($allowed);
 					if ($skipEmpty && empty($value)) {
@@ -692,7 +645,7 @@ class tx_rnbase_util_Link {
 				}
 			}
 			elseif ($deny) {
-				$deny = array_flip(tx_rnbase_util_Strings::trimExplode(',', $deny));
+				$deny = array_flip(t3lib_div::trimExplode(',', $deny));
 				$keepVarsArr = $keepVars->getArrayCopy();
 				foreach($keepVarsArr As $key => $value) {
 					if ($skipEmpty && empty($value)) {
@@ -705,13 +658,13 @@ class tx_rnbase_util_Link {
 			}
 			$add = $keepVarConf['add'];
 			if ($add) {
-				$add = tx_rnbase_util_Strings::trimExplode(',', $add);
+				$add = t3lib_div::trimExplode(',', $add);
 				foreach ($add As $linkvar) {
-					$linkvar = tx_rnbase_util_Strings::trimExplode('=', $linkvar);
+					$linkvar = t3lib_div::trimExplode('=', $linkvar);
 					if (count($linkvar)< 2)  {
 						// tt_news::* or ttnews::id
-						list($qualifier, $name) = tx_rnbase_util_Strings::trimExplode('::', $linkvar[0]);
-						if ($value = tx_rnbase_parameters::getPostOrGetParameter($qualifier)) {
+						list($qualifier, $name) = t3lib_div::trimExplode('::', $linkvar[0]);
+						if ($value = t3lib_div::_GP($qualifier)) {
 							if($name == '*' && is_array($value)) {
 								foreach ($value As $paramName => $paramValue) {
 									if ($skipEmpty && empty($paramValue)) {
@@ -750,19 +703,6 @@ class tx_rnbase_util_Link {
 			$this->noHash();
 		}
 
-		return $this;
-	}
-
-	/**
-	 * @see t3lib_div::linkThisScript
-	 * @see \TYPO3\CMS\Core\Utility\GeneralUtility::linkThisScript
-	 *
-	 * @param array $getParams Array of GET parameters to include
-	 * @return string
-	 */
-	static public function linkThisScript(array $getParams = array()) {
-		$utility = tx_rnbase_util_Typo3Classes::getGeneralUtilityClass();
-		return $utility::linkThisScript($getParams);
 	}
 }
 
